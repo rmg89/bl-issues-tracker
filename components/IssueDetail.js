@@ -199,7 +199,7 @@ export default function IssueDetail({ issue, users, currentUser, onBack, onUpdat
           </div>
         )}
 
-        <div className="section-label" style={{ marginTop: '1.25rem' }}>Discuss — notes</div>
+        <div className="section-label" style={{ marginTop: issue.realIssueBy ? '0.75rem' : '1.25rem' }}>Discuss — notes</div>
         <div className={styles.notes}>
           {issue.notes.length ? issue.notes.map((n, i) => (
             <div key={i} className={styles.note}>
@@ -228,7 +228,7 @@ export default function IssueDetail({ issue, users, currentUser, onBack, onUpdat
           style={{ marginBottom: issue.solutionBy ? '6px' : '1rem' }}
         />
         {issue.solutionBy && (
-          <div className={styles.fieldMeta}>
+          <div className={styles.fieldMeta} style={{ marginBottom: 0 }}>
             Last edited by {issue.solutionBy} · {fmtDateTime(issue.solutionAt)}
           </div>
         )}

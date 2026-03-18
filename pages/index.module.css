@@ -116,3 +116,34 @@
   color: var(--text-secondary);
   font-size: 14px;
 }
+
+.body { padding-bottom: 80px; }
+
+@media (max-width: 600px) {
+  .nav {
+    padding: 10px 12px;
+  }
+
+  .navTitle {
+    font-size: 13px;
+  }
+
+  .navUser {
+    gap: 6px;
+  }
+
+  .tabs {
+    overflow-x: auto;
+    gap: 0;
+  }
+
+  .tab {
+    padding: 10px 10px;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+
+  .body {
+    padding: 0 12px 5rem;
+  }
+}

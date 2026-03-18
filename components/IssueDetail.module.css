@@ -106,7 +106,7 @@
 
 .assignRow { display: flex; align-items: center; gap: 10px; }
 
-.fieldMeta { font-size: 11px; color: var(--text-tertiary); margin-top: 6px; margin-bottom: 0; }
+.fieldMeta { font-size: 11px; color: var(--text-tertiary); margin-top: 4px; margin-bottom: 0; display: block; }
 .assignMeta { font-size: 11px; color: var(--text-tertiary); margin-top: 6px; margin-bottom: 1.25rem; }
 
 .notes { margin-bottom: 10px; }
@@ -133,4 +133,24 @@
 .floatBar button {
   width: auto !important;
   flex-shrink: 0;
+}
+
+@media (max-width: 600px) {
+  .track {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+  }
+
+  .step {
+    min-width: 64px;
+    padding: 8px 2px;
+  }
+
+  .stepLabel {
+    font-size: 11px;
+  }
+
+  .stepTs {
+    font-size: 9px;
+  }
 }
