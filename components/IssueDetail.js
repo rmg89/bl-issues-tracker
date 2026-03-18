@@ -49,10 +49,8 @@ export default function IssueDetail({ issue, users, currentUser, onBack, onUpdat
   }
 
   async function advanceStatus(s) {
-    const newLog = [...statusLog]
-    if (!newLog.find(l => l.status === s)) {
-      newLog.push({ status: s, ts: new Date().toISOString(), by: currentUser.name })
-    }
+    const newLog = statusLog.filter(l => l.status !== s)
+    newLog.push({ status: s, ts: new Date().toISOString(), by: currentUser.name })
     await patch({ status: s, statusLog: newLog })
     onToast('Status updated')
   }
@@ -97,10 +95,8 @@ export default function IssueDetail({ issue, users, currentUser, onBack, onUpdat
   }
 
   async function archiveIssue() {
-    const newLog = [...statusLog]
-    if (!newLog.find(l => l.status === 'archived')) {
-      newLog.push({ status: 'archived', ts: new Date().toISOString(), by: currentUser.name })
-    }
+    const newLog = statusLog.filter(l => l.status !== 'archived')
+    newLog.push({ status: 'archived', ts: new Date().toISOString(), by: currentUser.name })
     await patch({ status: 'archived', statusLog: newLog })
     onToast('Issue archived')
     onBack()
