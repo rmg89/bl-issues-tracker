@@ -199,7 +199,7 @@ export default function IssueDetail({ issue, users, currentUser, onBack, onUpdat
           </div>
         )}
 
-        <div className="section-label" style={{ marginTop: issue.realIssueBy ? '0.75rem' : '1.25rem' }}>Discuss — notes</div>
+        <div className="section-label" style={{ marginTop: '0.5rem' }}>Discuss — notes</div>
         <div className={styles.notes}>
           {issue.notes.length ? issue.notes.map((n, i) => (
             <div key={i} className={styles.note}>
@@ -220,7 +220,7 @@ export default function IssueDetail({ issue, users, currentUser, onBack, onUpdat
           <button onClick={addNote} style={{ alignSelf: 'flex-end', flexShrink: 0 }}>Add</button>
         </div>
 
-        <div className="section-label" style={{ marginTop: '1.25rem' }}>Solve — resolution</div>
+        <div className="section-label" style={{ marginTop: '0.5rem' }}>Solve — resolution</div>
         <textarea
           placeholder="What is the agreed solution? Who will action it and by when?"
           value={solution}
