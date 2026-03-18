@@ -173,7 +173,7 @@ export default function IssueDetail({ issue, users, currentUser, onBack, onUpdat
         <div className="section-label" style={{ marginTop: '1.25rem' }}>Assign owner</div>
         <div className={styles.assignRow}>
           <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Owned by:</span>
-          <select value={assignedTo} onChange={e => { setAssignedTo(e.target.value); setAssignedChanged(true) }} style={{ flex: 1 }}>
+          <select value={assignedTo} onChange={e => { setAssignedTo(e.target.value); setAssignedChanged(true) }} style={{ flex: 1, marginBottom: 0 }}>
             <option value="">Unassigned</option>
             {users.map(u => <option key={u.id} value={u.username}>{u.name}</option>)}
           </select>
