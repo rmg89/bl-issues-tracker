@@ -122,11 +122,11 @@ export default function Login({ onLogin }) {
               />
             </div>
             {error && <div className={styles.error}>{error}</div>}
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button onClick={() => { setStep('name'); setError('') }} style={{ flexShrink: 0 }}>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
+              <button onClick={() => { setStep('name'); setError('') }} style={{ width: 100 }}>
                 Back
               </button>
-              <button className="btn-primary" style={{ flex: 1, maxWidth: 160 }} onClick={doLogin} disabled={loading || !pin}>
+              <button className="btn-primary" style={{ width: 120 }} onClick={doLogin} disabled={loading || !pin}>
                 {loading ? 'Signing in...' : 'Sign in'}
               </button>
             </div>
