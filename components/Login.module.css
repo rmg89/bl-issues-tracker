@@ -1,0 +1,89 @@
+.wrap {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1rem;
+  gap: 1.5rem;
+}
+
+.brand { text-align: center; }
+
+.logo {
+  width: 56px;
+  height: 56px;
+  background: var(--bl-orange);
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 12px;
+}
+
+.logo span {
+  color: white;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.brandTitle {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.brandSub {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-top: 3px;
+}
+
+.dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: var(--surface);
+  border: 0.5px solid var(--border-strong);
+  border-radius: var(--radius);
+  z-index: 100;
+  overflow: hidden;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+}
+
+.option {
+  padding: 10px 14px;
+  cursor: pointer;
+  font-size: 14px;
+  border-bottom: 0.5px solid var(--border);
+  display: flex;
+  align-items: center;
+  transition: background 0.1s;
+}
+
+.option:last-child { border-bottom: none; }
+
+.option:hover {
+  background: var(--bl-orange-light);
+  color: var(--bl-orange-dark);
+}
+
+.optionEmpty {
+  padding: 10px 14px;
+  font-size: 13px;
+  color: var(--text-tertiary);
+}
+
+.greeting {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  color: var(--text);
+}
+
+.error {
+  color: #C62828;
+  font-size: 13px;
+  margin-bottom: 10px;
+}
