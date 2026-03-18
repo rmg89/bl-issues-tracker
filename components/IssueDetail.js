@@ -31,7 +31,11 @@ export default function IssueDetail({ issue, users, currentUser, onBack, onUpdat
   const [saving, setSaving] = useState(false)
 
   const si = STEPS.indexOf(issue.status)
-  const statusLog = issue.statusLog || []
+  const rawLog = issue.statusLog || []
+  // Auto-populate submitted entry from createdAt if not already in log
+  const statusLog = rawLog.find(l => l.status === 'submitted')
+    ? rawLog
+    : [{ status: 'submitted', ts: issue.createdAt, by: issue.submittedByName || issue.submittedBy }, ...rawLog]
 
   async function patch(fields) {
     const res = await fetch(`/api/issues/${issue.id}`, {
