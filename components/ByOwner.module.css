@@ -137,3 +137,20 @@
 
 .daysUnresolved { font-size: 11px; color: var(--text-tertiary); white-space: nowrap; }
 .daysResolved { font-size: 11px; color: #2E7D32; white-space: nowrap; }
+
+
+
+.metaBreak {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+@media (max-width: 600px) {
+  .metaBreak {
+    display: block;
+    width: 100%;
+    height: 0;
+    flex-basis: 100%;
+  }
+}
