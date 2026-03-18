@@ -107,7 +107,7 @@
 .assignRow { display: flex; align-items: center; gap: 10px; }
 
 .fieldMeta { font-size: 11px; color: var(--text-tertiary); margin: 0; padding: 0; display: block; line-height: 1.4; }
-.assignMeta { font-size: 11px; color: var(--text-tertiary); margin-top: 6px; margin-bottom: 1.25rem; }
+.assignMeta { font-size: 11px; color: var(--text-tertiary); margin-top: 6px; margin-bottom: 0; }
 
 .notes { margin-bottom: 10px; }
 .note { background: var(--bg); border-radius: var(--radius); padding: 10px 12px; margin-bottom: 8px; }
@@ -152,5 +152,41 @@
 
   .stepTs {
     font-size: 9px;
+  }
+}
+
+@media (max-width: 600px) {
+  .track {
+    flex-direction: column;
+    overflow: visible;
+  }
+
+  .step {
+    border-right: none;
+    border-bottom: 0.5px solid var(--border-strong);
+    border-radius: 0;
+    flex-direction: row;
+    justify-content: space-between;
+    min-height: auto;
+    padding: 10px 14px;
+    text-align: left;
+  }
+
+  .step:first-child {
+    border-radius: var(--radius) var(--radius) 0 0;
+  }
+
+  .step:last-child {
+    border-radius: 0 0 var(--radius) var(--radius);
+    border-bottom: none;
+  }
+
+  .stepLabel {
+    font-size: 13px;
+  }
+
+  .stepTs {
+    font-size: 11px;
+    text-align: right;
   }
 }

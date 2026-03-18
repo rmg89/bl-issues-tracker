@@ -186,7 +186,7 @@ export default function IssueDetail({ issue, users, currentUser, onBack, onUpdat
           </div>
         )}
 
-        <div className="section-label" style={{ marginTop: '1.25rem' }}>Identify — real issue</div>
+        <div className="section-label" style={{ marginTop: '1rem' }}>Identify — real issue</div>
         <textarea
           placeholder="What is the actual root issue beneath the surface problem?"
           value={realIssue}

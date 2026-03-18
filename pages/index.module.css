@@ -121,26 +121,39 @@
 
 @media (max-width: 600px) {
   .nav {
-    padding: 10px 12px;
+    padding: 8px 12px;
   }
 
   .navTitle {
     font-size: 13px;
   }
 
-  .navUser {
+  .navRight {
     gap: 6px;
   }
 
+  .navRight button {
+    font-size: 12px;
+    padding: 5px 10px;
+  }
+
   .tabs {
-    overflow-x: auto;
     gap: 0;
+    flex-wrap: nowrap;
   }
 
   .tab {
-    padding: 10px 10px;
-    font-size: 12px;
+    padding: 10px 8px;
+    font-size: 11px;
     white-space: nowrap;
+    flex: 1;
+    justify-content: center;
+    text-align: center;
+  }
+
+  .count {
+    font-size: 10px;
+    padding: 1px 5px;
   }
 
   .body {
