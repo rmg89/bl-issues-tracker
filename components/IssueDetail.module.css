@@ -106,7 +106,7 @@
 
 .assignRow { display: flex; align-items: center; gap: 10px; }
 
-.fieldMeta { font-size: 11px; color: var(--text-tertiary); margin-top: 4px; margin-bottom: 0; display: block; }
+.fieldMeta { font-size: 11px; color: var(--text-tertiary); margin: 0; padding: 0; display: block; line-height: 1.4; }
 .assignMeta { font-size: 11px; color: var(--text-tertiary); margin-top: 6px; margin-bottom: 1.25rem; }
 
 .notes { margin-bottom: 10px; }

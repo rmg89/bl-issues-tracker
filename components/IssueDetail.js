@@ -191,15 +191,14 @@ export default function IssueDetail({ issue, users, currentUser, onBack, onUpdat
           placeholder="What is the actual root issue beneath the surface problem?"
           value={realIssue}
           onChange={e => setRealIssue(e.target.value)}
-          style={{ marginBottom: issue.realIssueBy ? '6px' : '1rem' }}
+          style={{ marginBottom: '4px' }}
         />
         {issue.realIssueBy && (
           <div className={styles.fieldMeta}>
             Last edited by {issue.realIssueBy} · {fmtDateTime(issue.realIssueAt)}
           </div>
         )}
-
-        <div className="section-label" style={{ marginTop: '0.5rem' }}>Discuss — notes</div>
+        <div className="section-label" style={{ marginTop: '1rem' }}>Discuss — notes</div>
         <div className={styles.notes}>
           {issue.notes.length ? issue.notes.map((n, i) => (
             <div key={i} className={styles.note}>
@@ -225,10 +224,10 @@ export default function IssueDetail({ issue, users, currentUser, onBack, onUpdat
           placeholder="What is the agreed solution? Who will action it and by when?"
           value={solution}
           onChange={e => setSolution(e.target.value)}
-          style={{ marginBottom: issue.solutionBy ? '6px' : '1rem' }}
+          style={{ marginBottom: '4px' }}
         />
         {issue.solutionBy && (
-          <div className={styles.fieldMeta} style={{ marginBottom: 0 }}>
+          <div className={styles.fieldMeta}>
             Last edited by {issue.solutionBy} · {fmtDateTime(issue.solutionAt)}
           </div>
         )}
