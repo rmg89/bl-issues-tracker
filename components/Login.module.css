@@ -87,3 +87,10 @@
   font-size: 13px;
   margin-bottom: 10px;
 }
+
+@media (max-width: 600px) {
+  .wrap {
+    justify-content: flex-start;
+    padding-top: 3rem;
+  }
+}
