@@ -118,6 +118,7 @@ export default function Login({ onLogin }) {
                 value={pin}
                 onChange={e => setPin(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && doLogin()}
+                onFocus={e => setTimeout(() => e.target.scrollIntoView({ behavior: 'smooth', block: 'center' }), 300)}
               />
             </div>
             {error && <div className={styles.error}>{error}</div>}
@@ -125,7 +126,7 @@ export default function Login({ onLogin }) {
               <button onClick={() => { setStep('name'); setError('') }} style={{ flexShrink: 0 }}>
                 Back
               </button>
-              <button className="btn-primary" style={{ flex: 1 }} onClick={doLogin} disabled={loading || !pin}>
+              <button className="btn-primary" style={{ flex: 1, maxWidth: 160 }} onClick={doLogin} disabled={loading || !pin}>
                 {loading ? 'Signing in...' : 'Sign in'}
               </button>
             </div>
