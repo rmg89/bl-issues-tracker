@@ -114,3 +114,40 @@
   flex-shrink: 0;
   align-self: center;
 }
+
+@media (max-width: 600px) {
+  .row {
+    flex-direction: column;
+    gap: 8px;
+    align-items: stretch;
+  }
+
+  .rowActions {
+    align-self: stretch;
+    flex-wrap: wrap;
+    border-top: 0.5px solid var(--border);
+    padding-top: 8px;
+  }
+
+  .rowActions button {
+    flex: 1;
+    justify-content: center;
+  }
+
+  .rowName {
+    flex-wrap: wrap;
+  }
+
+  .emailRow {
+    flex-wrap: wrap;
+  }
+
+  .emailInput {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}
