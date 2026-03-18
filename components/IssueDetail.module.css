@@ -104,7 +104,7 @@
 .active .stepLabel { font-weight: 600; }
 .active .stepTs { opacity: 0.85; }
 
-.assignRow { display: flex; align-items: center; gap: 10px; }
+.assignRow { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
 
 .fieldMeta { font-size: 11px; color: var(--text-tertiary); margin: 0; padding: 0; display: block; line-height: 1.4; }
 .assignMeta { font-size: 11px; color: var(--text-tertiary); margin-top: 6px; margin-bottom: 0; }
