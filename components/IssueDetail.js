@@ -104,8 +104,6 @@ export default function IssueDetail({ issue, users, currentUser, onBack, onUpdat
 
   return (
     <div>
-      <button className={styles.back} onClick={onBack}>← Back to issues</button>
-
       <div className="card">
         <div className={styles.topRow}>
           <h2 className={styles.title}>{issue.title}</h2>
@@ -235,6 +233,7 @@ export default function IssueDetail({ issue, users, currentUser, onBack, onUpdat
       </div>
 
       <div className={styles.floatBar}>
+        <button onClick={onBack}>← Back</button>
         {issue.status !== 'archived' && (
           <button className="btn-danger" onClick={archiveIssue}>Archive</button>
         )}
