@@ -128,3 +128,64 @@
   color: var(--color-text-success, #2E7D32);
   white-space: nowrap;
 }
+
+
+
+@media (max-width: 600px) {
+  .toolbar {
+    flex-wrap: wrap;
+  }
+
+  .search {
+    width: 100%;
+    flex: none;
+    order: -1;
+  }
+
+  .sort {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .archiveToggle {
+    flex-shrink: 0;
+  }
+}
+
+@media (max-width: 600px) {
+  .card {
+    padding: 12px;
+  }
+
+  .title {
+    font-size: 13px;
+  }
+
+  .meta {
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 600px) {
+  .meta {
+    flex-wrap: wrap;
+    row-gap: 2px;
+  }
+}
+
+.metaBreak {
+  display: none;
+}
+
+.metaDate {
+  font-size: inherit;
+  color: inherit;
+}
+
+@media (max-width: 600px) {
+  .metaBreak {
+    display: block;
+    width: 100%;
+    height: 0;
+  }
+}

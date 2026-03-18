@@ -111,8 +111,8 @@ export default function IssueList({ issues, onSelect, isAdmin }) {
                       </span>
                       {issue.location && <><span className={styles.dot}>·</span><span>{issue.location}</span></>}
                       {submitter && <><span className={styles.dot}>·</span><span>By {submitter}</span></>}
-                      <span className={styles.dot}>·</span>
-                      <span>{fmtDate(issue.createdAt)}</span>
+                      <span className={styles.metaBreak} />
+                      <span className={styles.metaDate}>{fmtDate(issue.createdAt)}</span>
                     </div>
                   </div>
                   <div className={styles.statusCol}>
