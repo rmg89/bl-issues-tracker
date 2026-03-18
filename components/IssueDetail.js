@@ -234,9 +234,6 @@ export default function IssueDetail({ issue, users, currentUser, onBack, onUpdat
 
       <div className={styles.floatBar}>
         <button onClick={onBack}>← Back</button>
-        {issue.status !== 'archived' && (
-          <button className="btn-danger" onClick={archiveIssue}>Archive</button>
-        )}
         <button className={`btn-primary ${styles.saveBtn}`} onClick={saveEdits} disabled={saving}>
           {saving ? 'Saving...' : 'Save changes'}
         </button>
