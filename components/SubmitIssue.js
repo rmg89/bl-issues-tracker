@@ -6,6 +6,8 @@ export default function SubmitIssue({ currentUser, onToast, onSubmitted }) {
   const [urgency, setUrgency] = useState('medium')
   const [location, setLocation] = useState('')
   const [photos, setPhotos] = useState([])
+  const [reportedVia, setReportedVia] = useState('')
+  const [reportedByName, setReportedByName] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState('')
@@ -27,6 +29,8 @@ export default function SubmitIssue({ currentUser, onToast, onSubmitted }) {
       formData.append('location', location.trim())
       formData.append('submittedBy', currentUser.username)
       formData.append('submittedByName', currentUser.name)
+      formData.append('reportedVia', reportedVia)
+      formData.append('reportedByName', reportedByName)
       photos.forEach(photo => formData.append('photos', photo))
 
       const res = await fetch('/api/issues', {
@@ -35,6 +39,7 @@ export default function SubmitIssue({ currentUser, onToast, onSubmitted }) {
       })
       if (!res.ok) throw new Error('Failed to submit')
       setTitle(''); setDescription(''); setLocation(''); setUrgency('medium'); setPhotos([])
+      setReportedVia(''); setReportedByName('')
       document.getElementById('photo-input').value = ''
       setSuccess(true)
       onToast('Issue submitted')
@@ -72,6 +77,35 @@ export default function SubmitIssue({ currentUser, onToast, onSubmitted }) {
       <div className="form-group">
         <label>Location / equipment</label>
         <input type="text" placeholder="e.g. Floor 2, Rack 3" value={location} onChange={e => setLocation(e.target.value)} />
+      </div>
+
+      <div className="form-group">
+        <label>Reported by</label>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+          {['Trainer', 'Client', 'Other'].map(opt => (
+            <button
+              key={opt}
+              type="button"
+              onClick={() => { setReportedVia(opt); setReportedByName('') }}
+              style={{
+                flex: 1, padding: '8px 0', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 500,
+                border: reportedVia === opt ? '1.5px solid var(--orange)' : '1px solid var(--border)',
+                backgroundColor: reportedVia === opt ? 'var(--orange-light)' : 'var(--surface)',
+                color: reportedVia === opt ? 'var(--orange-dark)' : 'var(--text-secondary)',
+              }}
+            >
+              {opt}
+            </button>
+          ))}
+        </div>
+        {reportedVia && (
+          <input
+            type="text"
+            placeholder={reportedVia === 'Trainer' ? "Trainer's name" : reportedVia === 'Client' ? "Client's name" : 'Name and context'}
+            value={reportedByName}
+            onChange={e => setReportedByName(e.target.value)}
+          />
+        )}
       </div>
 
       <div className="form-group">

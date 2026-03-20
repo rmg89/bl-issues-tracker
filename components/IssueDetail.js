@@ -120,6 +120,11 @@ export default function IssueDetail({ issue, users, currentUser, onBack, onUpdat
         <div className={styles.chips}>
           {issue.location && <span className={styles.chip}>{issue.location}</span>}
           <span className={styles.chip}>By {issue.submittedByName || issue.submittedBy} · {fmtDate(issue.createdAt)} at {fmtTime(issue.createdAt)}</span>
+          {issue.reportedVia && (
+            <span className={styles.chip}>
+              Reported by {issue.reportedVia}{issue.reportedByName ? `: ${issue.reportedByName}` : ''}
+            </span>
+          )}
           <span className={`${styles.urgencyTag} ${styles['u_' + urgency]}`}>{urgency} urgency</span>
           <span className={styles.changeUrgency}>
             change

@@ -9,7 +9,8 @@ export default async function handler(req, res) {
       assignedTo, assignedBy, assignedAt, assignedEmail,
       realIssue, realIssueBy, realIssueAt,
       solution, solutionBy, solutionAt,
-      notes, statusLog
+      notes, statusLog,
+      reportedVia, reportedByName
     } = req.body
     try {
       const fields = {}
@@ -27,6 +28,8 @@ export default async function handler(req, res) {
       if (solutionAt !== undefined) fields.SolutionAt = solutionAt
       if (notes !== undefined) fields.Notes = JSON.stringify(notes)
       if (statusLog !== undefined) fields.StatusLog = JSON.stringify(statusLog)
+      if (reportedVia !== undefined) fields.ReportedVia = reportedVia
+      if (reportedByName !== undefined) fields.ReportedByName = reportedByName
       const record = await IssuesTable.update(id, fields)
       return res.status(200).json(formatIssue(record))
     } catch (err) {

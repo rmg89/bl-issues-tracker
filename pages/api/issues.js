@@ -29,6 +29,8 @@ export default async function handler(req, res) {
       const location = get('location')
       const submittedBy = get('submittedBy')
       const submittedByName = get('submittedByName')
+      const reportedVia = get('reportedVia')
+      const reportedByName = get('reportedByName')
 
       if (!title) return res.status(400).json({ error: 'Title is required' })
 
@@ -43,6 +45,8 @@ export default async function handler(req, res) {
         if (description) airtableFields.Description = description
         if (urgency) airtableFields.Urgency = urgency
         if (location) airtableFields.Location = location
+        if (reportedVia) airtableFields.ReportedVia = reportedVia
+        if (reportedByName) airtableFields.ReportedByName = reportedByName
 
         // First create the record without photos
         const record = await IssuesTable.create(airtableFields)
