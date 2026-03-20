@@ -190,3 +190,14 @@
   .tabLabelShort { display: inline; }
   .tabLabelFull { display: none; }
 }
+
+@media (max-width: 600px) {
+  .navInner {
+    padding: 8px 12px;
+  }
+
+  .tabsInner {
+    padding: 0;
+    max-width: 100%;
+  }
+}
