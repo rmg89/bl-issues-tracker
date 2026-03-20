@@ -123,7 +123,7 @@ export default function Login({ onLogin }) {
             </div>
             {error && <div className={styles.error}>{error}</div>}
             <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
-              <button onClick={() => { setStep('name'); setError('') }} style={{ width: 100 }}>
+              <button onClick={() => { setStep('name'); setError('') }} style={{ width: 120 }}>
                 Back
               </button>
               <button className="btn-primary" style={{ width: 120 }} onClick={doLogin} disabled={loading || !pin}>

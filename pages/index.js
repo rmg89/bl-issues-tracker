@@ -95,23 +95,38 @@ export default function Home() {
         <div className={styles.tabs}>
           {currentUser.isAdmin ? (
             <>
-              <button className={`${styles.tab} ${tab === 'home' ? styles.tabActive : ''}`} onClick={() => switchTab('home')}>Home</button>
-              <button className={`${styles.tab} ${tab === 'submit' ? styles.tabActive : ''}`} onClick={() => switchTab('submit')}>Submit issue</button>
+              <button className={`${styles.tab} ${tab === 'home' ? styles.tabActive : ''}`} onClick={() => switchTab('home')}>
+                <span className={styles.tabLabelFull}>Home</span>
+                <span className={styles.tabLabelShort}>Home</span>
+              </button>
+              <button className={`${styles.tab} ${tab === 'submit' ? styles.tabActive : ''}`} onClick={() => switchTab('submit')}>
+                <span className={styles.tabLabelFull}>Submit issue</span>
+                <span className={styles.tabLabelShort}>Submit</span>
+              </button>
               <button className={`${styles.tab} ${tab === 'issues' ? styles.tabActive : ''}`} onClick={() => switchTab('issues')}>
-                All issues
+                <span className={styles.tabLabelFull}>All issues</span>
+                <span className={styles.tabLabelShort}>Issues</span>
                 {issues.filter(i => i.status !== 'archived').length > 0 && (
                   <span className={styles.count}>{issues.filter(i => i.status !== 'archived').length}</span>
                 )}
               </button>
-              <button className={`${styles.tab} ${tab === 'owner' ? styles.tabActive : ''}`} onClick={() => switchTab('owner')}>By owner</button>
-              <button className={`${styles.tab} ${tab === 'team' ? styles.tabActive : ''}`} onClick={() => switchTab('team')}>Manage team</button>
+              <button className={`${styles.tab} ${tab === 'owner' ? styles.tabActive : ''}`} onClick={() => switchTab('owner')}>
+                <span className={styles.tabLabelFull}>By owner</span>
+                <span className={styles.tabLabelShort}>By owner</span>
+              </button>
+              <button className={`${styles.tab} ${tab === 'team' ? styles.tabActive : ''}`} onClick={() => switchTab('team')}>
+                <span className={styles.tabLabelFull}>Manage team</span>
+                <span className={styles.tabLabelShort}>Team</span>
+              </button>
             </>
           ) : (
             <>
               <button className={`${styles.tab} ${tab === 'submit' ? styles.tabActive : ''}`} onClick={() => switchTab('submit')}>Submit issue</button>
               <button className={`${styles.tab} ${tab === 'my' ? styles.tabActive : ''}`} onClick={() => switchTab('my')}>
                 My issues
-                {myIssues.length > 0 && <span className={styles.count}>{myIssues.length}</span>}
+                {issues.filter(i => i.submittedBy === currentUser.username || i.assignedTo === currentUser.username).length > 0 && (
+                  <span className={styles.count}>{issues.filter(i => i.submittedBy === currentUser.username || i.assignedTo === currentUser.username).length}</span>
+                )}
               </button>
             </>
           )}
@@ -149,7 +164,14 @@ export default function Home() {
           )}
 
           {!loading && tab === 'my' && !currentUser.isAdmin && (
-            <IssueList issues={myIssues} onSelect={() => {}} isAdmin={false} />
+            <IssueList
+              issues={issues.filter(i =>
+                i.submittedBy === currentUser.username ||
+                i.assignedTo === currentUser.username
+              )}
+              onSelect={() => {}}
+              isAdmin={false}
+            />
           )}
 
           {!loading && tab === 'owner' && currentUser.isAdmin && (

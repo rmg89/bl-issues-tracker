@@ -140,15 +140,24 @@
   .tabs {
     gap: 0;
     flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: var(--surface);
+  }
+
+  .tabs::-webkit-scrollbar {
+    display: none;
   }
 
   .tab {
-    padding: 10px 8px;
-    font-size: 11px;
+    padding: 10px 14px;
+    font-size: 12px;
     white-space: nowrap;
-    flex: 1;
-    justify-content: center;
-    text-align: center;
+    flex-shrink: 0;
   }
 
   .count {
@@ -159,4 +168,12 @@
   .body {
     padding: 0 12px 5rem;
   }
+}
+
+.tabLabelShort { display: none; }
+.tabLabelFull { display: inline; }
+
+@media (max-width: 600px) {
+  .tabLabelShort { display: inline; }
+  .tabLabelFull { display: none; }
 }
