@@ -5,6 +5,13 @@ function fmtDate(str) {
   return new Date(str).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
+function fmtDateTime(str) {
+  if (!str) return ''
+  return new Date(str).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    + ' at '
+    + new Date(str).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+}
+
 const STATUS_LABEL = {
   submitted: 'Submitted', identified: 'Identified',
   discussing: 'Discussing', solved: 'Solved', archived: 'Archived'
@@ -64,7 +71,7 @@ export default function ByOwner({ issues, users, onSelect }) {
           {issue.location && <><span className={styles.dot}>·</span><span>{issue.location}</span></>}
           <span className={styles.metaBreak} />
           <span className={styles.dot}>·</span>
-          <span>{fmtDate(issue.createdAt)}</span>
+          <span>{fmtDateTime(issue.createdAt)}</span>
         </div>
       </div>
       <div className={styles.statusCol}>

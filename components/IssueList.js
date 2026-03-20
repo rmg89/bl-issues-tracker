@@ -1,6 +1,13 @@
 import { useState, useMemo } from 'react'
 import styles from './IssueList.module.css'
 
+function fmtDateTime(str) {
+  if (!str) return ''
+  return new Date(str).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    + ' at '
+    + new Date(str).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+}
+
 function fmtDate(str) {
   return new Date(str).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 }
@@ -118,7 +125,7 @@ export default function IssueList({ issues, onSelect, isAdmin, initialSort, curr
               {submitter && <><span className={styles.dot}>·</span><span>By {submitter}</span></>}
               <span className={styles.metaBreak} />
               <span className={styles.metaDot}>·</span>
-              <span className={styles.metaDate}>{fmtDate(issue.createdAt)}</span>
+              <span className={styles.metaDate}>{fmtDateTime(issue.createdAt)}</span>
             </div>
           </div>
           <div className={styles.statusCol}>
