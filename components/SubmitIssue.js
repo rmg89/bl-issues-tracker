@@ -1,14 +1,6 @@
-import React, { useState } from 'react'
-import {
-  View, Text, StyleSheet, ScrollView, TextInput,
-  TouchableOpacity, ActivityIndicator, KeyboardAvoidingView,
-  Platform, Image, Alert
-} from 'react-native'
-import * as ImagePicker from 'expo-image-picker'
-import { COLORS } from '../lib/constants'
-import { createIssue } from '../lib/api'
+import { useState } from 'react'
 
-export default function SubmitScreen({ currentUser, onSubmitted }) {
+export default function SubmitIssue({ currentUser, onToast, onSubmitted }) {
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [urgency, setUrgency] = useState('medium')
@@ -16,291 +8,135 @@ export default function SubmitScreen({ currentUser, onSubmitted }) {
   const [photos, setPhotos] = useState([])
   const [reportedVia, setReportedVia] = useState('')
   const [reportedByName, setReportedByName] = useState('')
-  const [saving, setSaving] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState('')
 
-  async function pickPhotos() {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
-    if (status !== 'granted') {
-      Alert.alert('Permission needed', 'Please allow access to your photo library to attach photos.')
-      return
-    }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsMultipleSelection: true,
-      base64: true,
-      quality: 0.7,
-    })
-    if (!result.canceled) {
-      const picked = result.assets.map((asset, i) => ({
-        uri: asset.uri,
-        base64: asset.base64,
-        filename: asset.fileName || `photo_${Date.now()}_${i}.jpg`,
-        mimeType: asset.mimeType || 'image/jpeg',
-      }))
-      setPhotos(prev => [...prev, ...picked].slice(0, 5))
-    }
+  function handlePhotoChange(e) {
+    const files = Array.from(e.target.files)
+    setPhotos(files)
   }
 
-  async function takePhoto() {
-    const { status } = await ImagePicker.requestCameraPermissionsAsync()
-    if (status !== 'granted') {
-      Alert.alert('Permission needed', 'Please allow camera access to take photos.')
-      return
-    }
-    const result = await ImagePicker.launchCameraAsync({
-      base64: true,
-      quality: 0.7,
-    })
-    if (!result.canceled) {
-      const asset = result.assets[0]
-      setPhotos(prev => [...prev, {
-        uri: asset.uri,
-        base64: asset.base64,
-        filename: asset.fileName || `photo_${Date.now()}.jpg`,
-        mimeType: asset.mimeType || 'image/jpeg',
-      }].slice(0, 5))
-    }
-  }
-
-  function removePhoto(index) {
-    setPhotos(prev => prev.filter((_, i) => i !== index))
-  }
-
-  async function submit() {
-    if (!title.trim()) { setError('Title is required.'); return }
-    setSaving(true)
+  async function handleSubmit() {
+    if (!title.trim()) { setError('Please enter a title.'); return }
+    setSubmitting(true)
     setError('')
     try {
-      await createIssue({
-        title: title.trim(),
-        description: description.trim(),
-        urgency,
-        location: location.trim(),
-        submittedBy: currentUser.username,
-        submittedByName: currentUser.name,
-        status: 'submitted',
-        reportedVia,
-        reportedByName,
-        photos: photos.map(p => ({
-          base64: p.base64,
-          filename: p.filename,
-          mimeType: p.mimeType,
-        })),
+      const formData = new FormData()
+      formData.append('title', title.trim())
+      formData.append('description', description.trim())
+      formData.append('urgency', urgency)
+      formData.append('location', location.trim())
+      formData.append('submittedBy', currentUser.username)
+      formData.append('submittedByName', currentUser.name)
+      formData.append('reportedVia', reportedVia)
+      formData.append('reportedByName', reportedByName)
+      photos.forEach(photo => formData.append('photos', photo))
+
+      const res = await fetch('/api/issues', {
+        method: 'POST',
+        body: formData,
       })
-      setSuccess(true)
-      setTitle(''); setDescription(''); setUrgency('medium'); setLocation(''); setPhotos([])
+      if (!res.ok) throw new Error('Failed to submit')
+      setTitle(''); setDescription(''); setLocation(''); setUrgency('medium'); setPhotos([])
       setReportedVia(''); setReportedByName('')
-      setTimeout(() => setSuccess(false), 3000)
+      document.getElementById('photo-input').value = ''
+      setSuccess(true)
+      onToast('Issue submitted')
       if (onSubmitted) onSubmitted()
-    } catch (e) {
-      setError('Something went wrong. Please try again.')
+      setTimeout(() => setSuccess(false), 4000)
+    } catch {
+      setError('Something went wrong. Try again.')
     }
-    setSaving(false)
+    setSubmitting(false)
   }
 
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1 }}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-      <ScrollView style={styles.wrap} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        {success && (
-          <View style={styles.successBanner}>
-            <Text style={styles.successText}>✓ Issue submitted successfully</Text>
-          </View>
+    <div className="card" style={{ maxWidth: 560 }}>
+      <div className="section-label" style={{ marginTop: 0, marginBottom: 16 }}>New equipment / facility issue</div>
+
+      <div className="form-group">
+        <label>Issue title</label>
+        <input type="text" placeholder="e.g. Cable machine pulley fraying" value={title} onChange={e => setTitle(e.target.value)} />
+      </div>
+
+      <div className="form-group">
+        <label>Description</label>
+        <textarea placeholder="Describe the issue in detail..." value={description} onChange={e => setDescription(e.target.value)} />
+      </div>
+
+      <div className="form-group">
+        <label>Urgency</label>
+        <select value={urgency} onChange={e => setUrgency(e.target.value)}>
+          <option value="low">Low — not blocking training</option>
+          <option value="medium">Medium — needs attention soon</option>
+          <option value="high">High — safety concern / blocking use</option>
+        </select>
+      </div>
+
+      <div className="form-group">
+        <label>Location / equipment</label>
+        <input type="text" placeholder="e.g. Floor 2, Rack 3" value={location} onChange={e => setLocation(e.target.value)} />
+      </div>
+
+      <div className="form-group">
+        <label>Reported by</label>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+          {['Staff (self)', 'Client', 'Other'].map(opt => (
+            <button
+              key={opt}
+              type="button"
+              onClick={() => { setReportedVia(opt); setReportedByName(opt === 'Staff (self)' ? currentUser.name : '') }}
+              style={{
+                flex: 1, padding: '8px 4px', borderRadius: 8, cursor: 'pointer', fontSize: 12, fontWeight: 500,
+                textAlign: 'center', whiteSpace: 'nowrap', overflow: 'hidden',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                border: reportedVia === opt ? '1.5px solid var(--orange)' : '1px solid var(--border)',
+                backgroundColor: reportedVia === opt ? 'var(--orange-light)' : 'var(--surface)',
+                color: reportedVia === opt ? 'var(--orange-dark)' : 'var(--text-secondary)',
+              }}
+            >
+              {opt}
+            </button>
+          ))}
+        </div>
+        {reportedVia && reportedVia !== 'Staff (self)' && (
+          <input
+            type="text"
+            placeholder={reportedVia === 'Client' ? "Client's name" : 'Name and context'}
+            value={reportedByName}
+            onChange={e => setReportedByName(e.target.value)}
+          />
         )}
+      </div>
 
-        <View style={styles.field}>
-          <Text style={styles.label}>TITLE *</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Brief description of the issue"
-            placeholderTextColor={COLORS.textTertiary}
-            value={title}
-            onChangeText={setTitle}
-          />
-        </View>
-
-        <View style={styles.field}>
-          <Text style={styles.label}>DESCRIPTION</Text>
-          <TextInput
-            style={[styles.input, styles.textarea]}
-            placeholder="More details about the issue..."
-            placeholderTextColor={COLORS.textTertiary}
-            value={description}
-            onChangeText={setDescription}
-            multiline
-            numberOfLines={4}
-            textAlignVertical="top"
-          />
-        </View>
-
-        <View style={styles.field}>
-          <Text style={styles.label}>URGENCY</Text>
-          <View style={styles.urgencyRow}>
-            {['low', 'medium', 'high'].map(u => (
-              <TouchableOpacity
-                key={u}
-                style={[styles.urgencyBtn, urgency === u && styles[`urgency_${u}`]]}
-                onPress={() => setUrgency(u)}
-              >
-                <Text style={[styles.urgencyBtnText, urgency === u && styles[`urgencyText_${u}`]]}>
-                  {u.charAt(0).toUpperCase() + u.slice(1)}
-                </Text>
-              </TouchableOpacity>
+      <div className="form-group">
+        <label>Photos (optional)</label>
+        <input
+          id="photo-input"
+          type="file"
+          accept="image/*"
+          multiple
+          onChange={handlePhotoChange}
+          style={{ padding: '6px 12px', cursor: 'pointer' }}
+        />
+        {photos.length > 0 && (
+          <div style={{ marginTop: 8, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            {photos.map((p, i) => (
+              <div key={i} style={{ fontSize: 12, color: 'var(--text-secondary)', background: 'var(--bg)', padding: '3px 8px', borderRadius: 20 }}>
+                {p.name}
+              </div>
             ))}
-          </View>
-        </View>
+          </div>
+        )}
+      </div>
 
-        <View style={styles.field}>
-          <Text style={styles.label}>LOCATION / EQUIPMENT</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="e.g. Floor 2, Rack 3"
-            placeholderTextColor={COLORS.textTertiary}
-            value={location}
-            onChangeText={setLocation}
-          />
-        </View>
+      {error && <div style={{ color: '#C62828', fontSize: 13, marginBottom: 10 }}>{error}</div>}
+      {success && <div style={{ color: '#2E7D32', fontSize: 13, marginBottom: 10 }}>Issue submitted successfully.</div>}
 
-        <View style={styles.field}>
-          <Text style={styles.label}>REPORTED BY</Text>
-          <View style={styles.reportedRow}>
-            {['Staff (self)', 'Client', 'Other'].map(opt => (
-              <TouchableOpacity
-                key={opt}
-                style={[styles.reportedBtn, reportedVia === opt && styles.reportedBtnActive]}
-                onPress={() => { setReportedVia(opt); setReportedByName(opt === 'Staff (self)' ? currentUser.name : '') }}
-              >
-                <Text style={[styles.reportedBtnText, reportedVia === opt && styles.reportedBtnTextActive]}>
-                  {opt}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-          {reportedVia !== '' && reportedVia !== 'Staff (self)' && (
-            <TextInput
-              style={[styles.input, { marginTop: 8 }]}
-              placeholder={
-                reportedVia === 'Trainer' ? "Trainer's name" :
-                reportedVia === 'Client' ? "Client's name" :
-                'Name and context'
-              }
-              placeholderTextColor={COLORS.textTertiary}
-              value={reportedByName}
-              onChangeText={setReportedByName}
-            />
-          )}
-        </View>
-
-        <View style={styles.field}>
-          <Text style={styles.label}>PHOTOS (optional, max 5)</Text>
-          {photos.length > 0 && (
-            <View style={styles.photosRow}>
-              {photos.map((photo, i) => (
-                <View key={i} style={styles.photoThumb}>
-                  <Image source={{ uri: photo.uri }} style={styles.photoImage} resizeMode="cover" />
-                  <TouchableOpacity style={styles.photoRemove} onPress={() => removePhoto(i)}>
-                    <Text style={styles.photoRemoveText}>✕</Text>
-                  </TouchableOpacity>
-                </View>
-              ))}
-            </View>
-          )}
-          {photos.length < 5 && (
-            <View style={styles.photoButtons}>
-              <TouchableOpacity style={styles.photoBtn} onPress={takePhoto}>
-                <Text style={styles.photoBtnText}>📷 Camera</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.photoBtn} onPress={pickPhotos}>
-                <Text style={styles.photoBtnText}>🖼 Library</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-        </View>
-
-        {error ? <Text style={styles.error}>{error}</Text> : null}
-
-        <TouchableOpacity
-          style={[styles.submitBtn, saving && styles.disabled]}
-          onPress={submit}
-          disabled={saving}
-        >
-          {saving
-            ? <ActivityIndicator color="#fff" />
-            : <Text style={styles.submitBtnText}>Submit issue</Text>
-          }
-        </TouchableOpacity>
-      </ScrollView>
-    </KeyboardAvoidingView>
+      <button className="btn-primary" onClick={handleSubmit} disabled={submitting} style={{ width: '100%' }}>
+        {submitting ? 'Submitting...' : 'Submit issue'}
+      </button>
+    </div>
   )
 }
-
-const styles = StyleSheet.create({
-  wrap: { flex: 1, backgroundColor: COLORS.bg },
-  content: { padding: 16, paddingBottom: 40 },
-  successBanner: {
-    backgroundColor: COLORS.greenLight, borderRadius: 10,
-    padding: 12, marginBottom: 16,
-  },
-  successText: { color: COLORS.green, fontWeight: '600', fontSize: 14 },
-  field: { marginBottom: 20 },
-  label: {
-    fontSize: 11, fontWeight: '600', color: COLORS.textTertiary,
-    letterSpacing: 0.8, textTransform: 'uppercase', marginBottom: 8,
-  },
-  input: {
-    backgroundColor: COLORS.surface, borderWidth: 1,
-    borderColor: COLORS.border, borderRadius: 10,
-    padding: 12, fontSize: 15, color: COLORS.text,
-  },
-  textarea: { height: 100, textAlignVertical: 'top' },
-  urgencyRow: { flexDirection: 'row', gap: 8 },
-  urgencyBtn: {
-    flex: 1, padding: 10, borderRadius: 10,
-    borderWidth: 1, borderColor: COLORS.border,
-    backgroundColor: COLORS.surface, alignItems: 'center',
-  },
-  urgency_low: { backgroundColor: '#F1F8E9', borderColor: '#AED581' },
-  urgency_medium: { backgroundColor: COLORS.amberLight, borderColor: '#FFB74D' },
-  urgency_high: { backgroundColor: COLORS.redLight, borderColor: '#EF9A9A' },
-  urgencyBtnText: { fontSize: 13, fontWeight: '500', color: COLORS.textSecondary },
-  urgencyText_low: { color: '#558B2F' },
-  urgencyText_medium: { color: COLORS.amber },
-  urgencyText_high: { color: COLORS.red },
-  photosRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 10 },
-  photoThumb: { position: 'relative' },
-  photoImage: { width: 80, height: 80, borderRadius: 8, borderWidth: 0.5, borderColor: COLORS.border },
-  photoRemove: {
-    position: 'absolute', top: -6, right: -6,
-    backgroundColor: COLORS.red, borderRadius: 10,
-    width: 20, height: 20, alignItems: 'center', justifyContent: 'center',
-  },
-  photoRemoveText: { color: '#fff', fontSize: 10, fontWeight: '700' },
-  photoButtons: { flexDirection: 'row', gap: 10 },
-  photoBtn: {
-    flex: 1, backgroundColor: COLORS.surface,
-    borderWidth: 1, borderColor: COLORS.border,
-    borderRadius: 10, paddingVertical: 10,
-    alignItems: 'center',
-  },
-  photoBtnText: { fontSize: 13, color: COLORS.textSecondary, fontWeight: '500' },
-  error: { color: COLORS.red, fontSize: 13, marginBottom: 12 },
-  submitBtn: {
-    backgroundColor: COLORS.orange, borderRadius: 10,
-    padding: 16, alignItems: 'center',
-  },
-  submitBtnText: { color: '#fff', fontSize: 16, fontWeight: '600' },
-  disabled: { opacity: 0.6 },
-  reportedRow: { flexDirection: 'row', gap: 8 },
-  reportedBtn: {
-    flex: 1, padding: 10, borderRadius: 10,
-    borderWidth: 1, borderColor: COLORS.border,
-    backgroundColor: COLORS.surface, alignItems: 'center',
-  },
-  reportedBtnActive: { backgroundColor: COLORS.orangeLight, borderColor: COLORS.orange },
-  reportedBtnText: { fontSize: 13, fontWeight: '500', color: COLORS.textSecondary },
-  reportedBtnTextActive: { color: COLORS.orangeDark, fontWeight: '600' },
-})

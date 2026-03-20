@@ -120,25 +120,29 @@ export default function IssueDetail({ issue, users, currentUser, onBack, onUpdat
         <div className={styles.chips}>
           {issue.location && <span className={styles.chip}>{issue.location}</span>}
           <span className={styles.chip}>By {issue.submittedByName || issue.submittedBy} · {fmtDate(issue.createdAt)} at {fmtTime(issue.createdAt)}</span>
-          {issue.reportedVia && (
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <span className={`${styles.urgencyTag} ${styles['u_' + urgency]}`}>{urgency} urgency</span>
+            <span className={styles.changeUrgency}>
+              change
+              <select
+                value={urgency}
+                onChange={e => setUrgency(e.target.value)}
+                style={{ position: 'absolute', opacity: 0, width: '140px', height: '100%', top: 0, left: 0, cursor: 'pointer' }}
+              >
+                <option value="low">Low urgency</option>
+                <option value="medium">Medium urgency</option>
+                <option value="high">High urgency</option>
+              </select>
+            </span>
+          </span>
+        </div>
+        {issue.reportedVia && (
+          <div style={{ marginTop: 8 }}>
             <span className={styles.chip}>
               Reported by {issue.reportedVia}{issue.reportedByName ? `: ${issue.reportedByName}` : ''}
             </span>
-          )}
-          <span className={`${styles.urgencyTag} ${styles['u_' + urgency]}`}>{urgency} urgency</span>
-          <span className={styles.changeUrgency}>
-            change
-            <select
-              value={urgency}
-              onChange={e => setUrgency(e.target.value)}
-              style={{ position: 'absolute', opacity: 0, width: '140px', height: '100%', top: 0, left: 0, cursor: 'pointer' }}
-            >
-              <option value="low">Low urgency</option>
-              <option value="medium">Medium urgency</option>
-              <option value="high">High urgency</option>
-            </select>
-          </span>
-        </div>
+          </div>
+        )}
 
         {issue.photos && issue.photos.length > 0 && (
           <>
