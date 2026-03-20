@@ -224,3 +224,16 @@
   text-transform: none;
   letter-spacing: 0;
 }
+
+.assignedFlag {
+  font-size: 11px;
+  font-weight: 700;
+  color: #C62828;
+  background: #FFEBEE;
+  padding: 2px 8px;
+  border-radius: 20px;
+  white-space: nowrap;
+  margin-bottom: 4px;
+  display: block;
+  text-align: right;
+}

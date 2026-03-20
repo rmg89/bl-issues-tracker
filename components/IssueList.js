@@ -46,7 +46,7 @@ function getGroupKey(issue, sortBy) {
   return null
 }
 
-export default function IssueList({ issues, onSelect, isAdmin, initialSort }) {
+export default function IssueList({ issues, onSelect, isAdmin, initialSort, currentUser }) {
   const [search, setSearch] = useState('')
   const [sortBy, setSortBy] = useState(initialSort || 'newest')
   const [showArchived, setShowArchived] = useState(false)

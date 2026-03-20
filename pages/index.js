@@ -163,7 +163,7 @@ export default function Home() {
                 onToast={showToast}
               />
             ) : (
-              <IssueList issues={issues} onSelect={setSelectedIssueId} isAdmin={true} initialSort={issueListSort} initialFilter={issueListFilter} />
+              <IssueList issues={issues} onSelect={setSelectedIssueId} isAdmin={true} initialSort={issueListSort} initialFilter={issueListFilter} currentUser={currentUser} />
             )
           )}
 
@@ -175,6 +175,7 @@ export default function Home() {
               )}
               onSelect={() => {}}
               isAdmin={false}
+              currentUser={currentUser}
             />
           )}
 
