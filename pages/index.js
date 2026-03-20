@@ -93,9 +93,8 @@ export default function Home() {
         </div>
       </nav>
 
-      <div className={styles.body}>
-        <div className={styles.tabs}>
-          <div className={styles.tabsInner}>
+      <div className={styles.tabs}>
+        <div className={styles.tabsInner}>
           {currentUser.isAdmin ? (
             <>
               <button className={`${styles.tab} ${tab === 'home' ? styles.tabActive : ''}`} onClick={() => switchTab('home')}>
@@ -133,9 +132,10 @@ export default function Home() {
               </button>
             </>
           )}
-          </div>
         </div>
+      </div>
 
+      <div className={styles.body}>
         <div className={styles.content}>
           {loading && <div className={styles.loading}>Loading...</div>}
 
