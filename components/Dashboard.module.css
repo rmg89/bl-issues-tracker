@@ -1,0 +1,147 @@
+.wrap { padding-bottom: 1rem; }
+
+.greeting {
+  font-size: 20px;
+  font-weight: 500;
+  color: var(--text);
+  margin-bottom: 1.25rem;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 1rem;
+}
+
+.stat {
+  border-radius: var(--radius-lg);
+  padding: 1rem;
+  cursor: pointer;
+  transition: filter 0.15s;
+}
+.stat:hover { filter: brightness(0.96); }
+
+.statOrange { background: #FAE9E1; }
+.statRed { background: #FFEBEE; }
+.statAmber { background: #FFF8E1; }
+.statGreen { background: #E8F5E9; }
+
+.statNumber {
+  font-size: 32px;
+  font-weight: 600;
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.statOrange .statNumber { color: #B8400F; }
+.statRed .statNumber { color: #C62828; }
+.statAmber .statNumber { color: #E65100; }
+.statGreen .statNumber { color: #2E7D32; }
+
+.statLabel {
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.statOrange .statLabel { color: #B8400F; }
+.statRed .statLabel { color: #C62828; }
+.statAmber .statLabel { color: #E65100; }
+.statGreen .statLabel { color: #2E7D32; }
+
+.submitBtn {
+  width: 100%;
+  margin-bottom: 1.5rem;
+  justify-content: center;
+}
+
+.section { }
+
+.sectionHeader {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+  border-bottom: 0.5px solid var(--border);
+}
+
+.activityRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 0.5px solid var(--border);
+  cursor: pointer;
+}
+.activityRow:last-child { border-bottom: none; }
+.activityRow:hover .activityTitle { color: #E8541A; }
+
+.activityLeft { flex: 1; min-width: 0; }
+
+.activityTitle {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+  margin-bottom: 2px;
+  transition: color 0.15s;
+}
+
+.activityMeta {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.empty {
+  font-size: 13px;
+  color: var(--text-tertiary);
+  padding: 1rem 0;
+}
+
+.archivePrompt {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #FFF8E1;
+  color: #E65100;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 10px 14px;
+  border-radius: var(--radius);
+  margin-bottom: 1rem;
+  cursor: pointer;
+  border: 0.5px solid #FFE0B2;
+}
+.archivePrompt:hover { background: #FFE0B2; }
+
+.archivePromptIcon {
+  font-size: 14px;
+}
+
+.activityAction {
+  font-weight: 500;
+  color: var(--text);
+}
+
+.activityDot {
+  color: var(--text-tertiary);
+}
+
+.newPrompt {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #FAE9E1;
+  color: #B8400F;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 10px 14px;
+  border-radius: var(--radius);
+  margin-bottom: 10px;
+  cursor: pointer;
+  border: 0.5px solid #F0C0A0;
+}
+.newPrompt:hover { background: #F0C0A0; }

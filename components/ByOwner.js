@@ -36,7 +36,8 @@ function sortIssues(issues) {
 export default function ByOwner({ issues, users, onSelect }) {
   const active = (issues || []).filter(i => i.status !== 'archived')
 
-  const unassigned = sortIssues(active.filter(i => !i.assignedTo || !i.assignedTo.trim()))
+  const unassigned = sortIssues(active.filter(i => (!i.assignedTo || !i.assignedTo.trim()) && i.status !== 'solved'))
+  const solvedUnassigned = active.filter(i => (!i.assignedTo || !i.assignedTo.trim()) && i.status === 'solved')
   const userGroups = (users || []).map(u => ({
     label: u.name,
     username: u.username,
@@ -113,6 +114,18 @@ export default function ByOwner({ issues, users, onSelect }) {
           <div className={styles.list}>{group.issues.map(renderCard)}</div>
         </div>
       ))}
+      {solvedUnassigned.length > 0 && (
+        <div className={styles.group} style={{ marginTop: '1rem', opacity: 0.6 }}>
+          <div className={styles.groupHeader}>
+            <div className={styles.groupIdentity}>
+              <div className={`${styles.avatar} ${styles.avatarGray}`}>✓</div>
+              <span className={styles.groupName}>Resolved without owner</span>
+              <span className={styles.groupCount}>{solvedUnassigned.length} issue{solvedUnassigned.length !== 1 ? 's' : ''}</span>
+            </div>
+          </div>
+          <div className={styles.list}>{solvedUnassigned.map(renderCard)}</div>
+        </div>
+      )}
     </div>
   )
 }

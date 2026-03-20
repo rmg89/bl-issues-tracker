@@ -5,14 +5,17 @@ import IssueDetail from '../components/IssueDetail'
 import SubmitIssue from '../components/SubmitIssue'
 import ManageTeam from '../components/ManageTeam'
 import ByOwner from '../components/ByOwner'
+import Dashboard from '../components/Dashboard'
 import styles from './index.module.css'
 
 export default function Home() {
   const [currentUser, setCurrentUser] = useState(null)
   const [users, setUsers] = useState([])
   const [issues, setIssues] = useState([])
-  const [tab, setTab] = useState('issues')
+  const [tab, setTab] = useState('home')
   const [selectedIssueId, setSelectedIssueId] = useState(null)
+  const [issueListSort, setIssueListSort] = useState('newest')
+  const [issueListFilter, setIssueListFilter] = useState(null)
   const [loading, setLoading] = useState(false)
   const [toast, setToast] = useState('')
   const [toastVisible, setToastVisible] = useState(false)
@@ -42,7 +45,7 @@ export default function Home() {
 
   function handleLogin(user) {
     setCurrentUser(user)
-    setTab(user.isAdmin ? 'issues' : 'submit')
+    setTab(user.isAdmin ? 'home' : 'submit')
   }
 
   function handleLogout() {
@@ -50,11 +53,23 @@ export default function Home() {
     setUsers([])
     setIssues([])
     setSelectedIssueId(null)
-    setTab('issues')
+    setTab('home')
   }
 
   function handleIssueUpdate(updated) {
     setIssues(prev => prev.map(i => i.id === updated.id ? updated : i))
+  }
+
+  function switchTab(t) {
+    setTab(t)
+    setSelectedIssueId(null)
+  }
+
+  function switchTabSorted(t, sort, filter) {
+    setTab(t)
+    setSelectedIssueId(null)
+    if (sort) setIssueListSort(sort)
+    if (filter !== undefined) setIssueListFilter(filter)
   }
 
   if (!currentUser) return <Login onLogin={handleLogin} />
@@ -78,53 +93,41 @@ export default function Home() {
 
       <div className={styles.body}>
         <div className={styles.tabs}>
-          <button
-            className={`${styles.tab} ${tab === 'submit' ? styles.tabActive : ''}`}
-            onClick={() => { setTab('submit'); setSelectedIssueId(null) }}
-          >
-            Submit issue
-          </button>
           {currentUser.isAdmin ? (
             <>
-              <button
-                className={`${styles.tab} ${tab === 'issues' ? styles.tabActive : ''}`}
-                onClick={() => { setTab('issues'); setSelectedIssueId(null) }}
-              >
+              <button className={`${styles.tab} ${tab === 'home' ? styles.tabActive : ''}`} onClick={() => switchTab('home')}>Home</button>
+              <button className={`${styles.tab} ${tab === 'submit' ? styles.tabActive : ''}`} onClick={() => switchTab('submit')}>Submit issue</button>
+              <button className={`${styles.tab} ${tab === 'issues' ? styles.tabActive : ''}`} onClick={() => switchTab('issues')}>
                 All issues
                 {issues.filter(i => i.status !== 'archived').length > 0 && (
-                  <span className={styles.count}>
-                    {issues.filter(i => i.status !== 'archived').length}
-                  </span>
+                  <span className={styles.count}>{issues.filter(i => i.status !== 'archived').length}</span>
                 )}
               </button>
-              <button
-                className={`${styles.tab} ${tab === 'owner' ? styles.tabActive : ''}`}
-                onClick={() => { setTab('owner'); setSelectedIssueId(null) }}
-              >
-                By owner
-              </button>
-              <button
-                className={`${styles.tab} ${tab === 'team' ? styles.tabActive : ''}`}
-                onClick={() => { setTab('team'); setSelectedIssueId(null) }}
-              >
-                Manage team
-              </button>
+              <button className={`${styles.tab} ${tab === 'owner' ? styles.tabActive : ''}`} onClick={() => switchTab('owner')}>By owner</button>
+              <button className={`${styles.tab} ${tab === 'team' ? styles.tabActive : ''}`} onClick={() => switchTab('team')}>Manage team</button>
             </>
           ) : (
-            <button
-              className={`${styles.tab} ${tab === 'my' ? styles.tabActive : ''}`}
-              onClick={() => { setTab('my'); setSelectedIssueId(null) }}
-            >
-              My issues
-              {myIssues.length > 0 && (
-                <span className={styles.count}>{myIssues.length}</span>
-              )}
-            </button>
+            <>
+              <button className={`${styles.tab} ${tab === 'submit' ? styles.tabActive : ''}`} onClick={() => switchTab('submit')}>Submit issue</button>
+              <button className={`${styles.tab} ${tab === 'my' ? styles.tabActive : ''}`} onClick={() => switchTab('my')}>
+                My issues
+                {myIssues.length > 0 && <span className={styles.count}>{myIssues.length}</span>}
+              </button>
+            </>
           )}
         </div>
 
         <div className={styles.content}>
           {loading && <div className={styles.loading}>Loading...</div>}
+
+          {!loading && tab === 'home' && currentUser.isAdmin && (
+            <Dashboard
+              issues={issues}
+              currentUser={currentUser}
+              onNavigate={switchTabSorted}
+              onSelectIssue={(id) => { setSelectedIssueId(id); setTab('issues') }}
+            />
+          )}
 
           {!loading && tab === 'submit' && (
             <SubmitIssue currentUser={currentUser} onToast={showToast} onSubmitted={loadData} />
@@ -141,20 +144,12 @@ export default function Home() {
                 onToast={showToast}
               />
             ) : (
-              <IssueList
-                issues={issues}
-                onSelect={setSelectedIssueId}
-                isAdmin={true}
-              />
+              <IssueList issues={issues} onSelect={setSelectedIssueId} isAdmin={true} initialSort={issueListSort} initialFilter={issueListFilter} />
             )
           )}
 
           {!loading && tab === 'my' && !currentUser.isAdmin && (
-            <IssueList
-              issues={myIssues}
-              onSelect={() => {}}
-              isAdmin={false}
-            />
+            <IssueList issues={myIssues} onSelect={() => {}} isAdmin={false} />
           )}
 
           {!loading && tab === 'owner' && currentUser.isAdmin && (
@@ -168,11 +163,7 @@ export default function Home() {
                 onToast={showToast}
               />
             ) : (
-              <ByOwner
-                issues={issues}
-                users={users}
-                onSelect={setSelectedIssueId}
-              />
+              <ByOwner issues={issues} users={users} onSelect={setSelectedIssueId} />
             )
           )}
 
