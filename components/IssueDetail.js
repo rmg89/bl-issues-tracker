@@ -37,6 +37,9 @@ export default function IssueDetail({ issue, users, currentUser, onBack, onUpdat
     ? rawLog
     : [{ status: 'submitted', ts: issue.createdAt, by: issue.submittedByName || issue.submittedBy }, ...rawLog]
 
+  // Only show admins in the assign dropdown
+  const adminUsers = users.filter(u => u.isAdmin)
+
   async function patch(fields) {
     const res = await fetch(`/api/issues/${issue.id}`, {
       method: 'PATCH',
@@ -175,7 +178,7 @@ export default function IssueDetail({ issue, users, currentUser, onBack, onUpdat
           <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Owned by:</span>
           <select value={assignedTo} onChange={e => { setAssignedTo(e.target.value); setAssignedChanged(true) }} style={{ flex: 1, marginBottom: 0 }}>
             <option value="">Unassigned</option>
-            {users.map(u => <option key={u.id} value={u.username}>{u.name}</option>)}
+            {adminUsers.map(u => <option key={u.id} value={u.username}>{u.name}</option>)}
           </select>
         </div>
         {issue.assignedBy && (

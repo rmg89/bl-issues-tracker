@@ -74,7 +74,7 @@ export default function Home() {
 
   if (!currentUser) return <Login onLogin={handleLogin} />
 
-  const myIssues = issues.filter(i => i.submittedBy === currentUser.username)
+  const mySubmittedIssues = issues.filter(i => i.submittedBy === currentUser.username)
   const selectedIssue = issues.find(i => i.id === selectedIssueId)
 
   return (
@@ -125,9 +125,9 @@ export default function Home() {
             <>
               <button className={`${styles.tab} ${tab === 'submit' ? styles.tabActive : ''}`} onClick={() => switchTab('submit')}>Submit issue</button>
               <button className={`${styles.tab} ${tab === 'my' ? styles.tabActive : ''}`} onClick={() => switchTab('my')}>
-                My issues
-                {issues.filter(i => i.submittedBy === currentUser.username || i.assignedTo === currentUser.username).length > 0 && (
-                  <span className={styles.count}>{issues.filter(i => i.submittedBy === currentUser.username || i.assignedTo === currentUser.username).length}</span>
+                Submitted issues
+                {mySubmittedIssues.length > 0 && (
+                  <span className={styles.count}>{mySubmittedIssues.length}</span>
                 )}
               </button>
             </>
@@ -169,10 +169,7 @@ export default function Home() {
 
           {!loading && tab === 'my' && !currentUser.isAdmin && (
             <IssueList
-              issues={issues.filter(i =>
-                i.submittedBy === currentUser.username ||
-                i.assignedTo === currentUser.username
-              )}
+              issues={mySubmittedIssues}
               onSelect={() => {}}
               isAdmin={false}
               currentUser={currentUser}
