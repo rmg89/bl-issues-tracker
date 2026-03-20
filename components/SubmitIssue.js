@@ -82,13 +82,14 @@ export default function SubmitIssue({ currentUser, onToast, onSubmitted }) {
       <div className="form-group">
         <label>Reported by</label>
         <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-          {['Trainer', 'Client', 'Other'].map(opt => (
+          {['Staff (self)', 'Client', 'Other'].map(opt => (
             <button
               key={opt}
               type="button"
-              onClick={() => { setReportedVia(opt); setReportedByName('') }}
+              onClick={() => { setReportedVia(opt); setReportedByName(opt === 'Staff (self)' ? currentUser.name : '') }}
               style={{
                 flex: 1, padding: '8px 0', borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 500,
+                textAlign: 'center',
                 border: reportedVia === opt ? '1.5px solid var(--orange)' : '1px solid var(--border)',
                 backgroundColor: reportedVia === opt ? 'var(--orange-light)' : 'var(--surface)',
                 color: reportedVia === opt ? 'var(--orange-dark)' : 'var(--text-secondary)',
@@ -98,10 +99,10 @@ export default function SubmitIssue({ currentUser, onToast, onSubmitted }) {
             </button>
           ))}
         </div>
-        {reportedVia && (
+        {reportedVia && reportedVia !== 'Staff (self)' && (
           <input
             type="text"
-            placeholder={reportedVia === 'Trainer' ? "Trainer's name" : reportedVia === 'Client' ? "Client's name" : 'Name and context'}
+            placeholder={reportedVia === 'Client' ? "Client's name" : 'Name and context'}
             value={reportedByName}
             onChange={e => setReportedByName(e.target.value)}
           />
