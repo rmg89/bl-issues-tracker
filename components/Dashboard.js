@@ -72,7 +72,7 @@ export default function Dashboard({ issues, currentUser, onNavigate, onSelectIss
     return ts && ts < oneWeekAgo
   })
 
-  const fortyEightHoursAgo = new Date(now - 72 * 60 * 60 * 1000)
+  const fortyEightHoursAgo = new Date(now - 48 * 60 * 60 * 1000)
   const newIssues = issues.filter(i =>
     i.status === 'submitted' && new Date(i.createdAt) >= fortyEightHoursAgo
   )
