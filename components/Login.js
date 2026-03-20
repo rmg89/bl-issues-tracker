@@ -114,7 +114,7 @@ export default function Login({ onLogin }) {
                 ref={pinRef}
                 type="password"
                 placeholder="4-digit PIN"
-                maxLength={6}
+                maxLength={4}
                 value={pin}
                 onChange={e => setPin(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && doLogin()}
