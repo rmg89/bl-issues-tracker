@@ -7,13 +7,18 @@
 .nav {
   background: var(--surface);
   border-bottom: 0.5px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.navInner {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 12px 24px;
-  position: sticky;
-  top: 0;
-  z-index: 100;
+  max-width: 720px;
+  margin: 0 auto;
 }
 
 .navBrand {
@@ -64,10 +69,18 @@
 }
 
 .tabs {
-  display: flex;
-  gap: 0;
   border-bottom: 0.5px solid var(--border);
   margin-bottom: 1.5rem;
+  background: var(--surface);
+  sticky: top;
+}
+
+.tabsInner {
+  display: flex;
+  gap: 0;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 0 24px;
 }
 
 .tab {

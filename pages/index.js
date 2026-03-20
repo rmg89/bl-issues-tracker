@@ -80,19 +80,22 @@ export default function Home() {
   return (
     <div className={styles.app}>
       <nav className={styles.nav}>
-        <div className={styles.navBrand}>
-          <div className={styles.navLogo}><span>BL</span></div>
-          <span className={styles.navTitle}>Issues Tracker</span>
-        </div>
-        <div className={styles.navRight}>
-          <span className={styles.navUser}>{currentUser.name}</span>
-          {currentUser.isAdmin && <span className="admin-tag">admin</span>}
-          <button onClick={handleLogout} style={{ fontSize: 13, padding: '5px 12px' }}>Sign out</button>
+        <div className={styles.navInner}>
+          <div className={styles.navBrand}>
+            <div className={styles.navLogo}><span>BL</span></div>
+            <span className={styles.navTitle}>Issues Tracker</span>
+          </div>
+          <div className={styles.navRight}>
+            <span className={styles.navUser}>{currentUser.name}</span>
+            {currentUser.isAdmin && <span className="admin-tag">admin</span>}
+            <button onClick={handleLogout} style={{ fontSize: 13, padding: '5px 12px' }}>Sign out</button>
+          </div>
         </div>
       </nav>
 
       <div className={styles.body}>
         <div className={styles.tabs}>
+          <div className={styles.tabsInner}>
           {currentUser.isAdmin ? (
             <>
               <button className={`${styles.tab} ${tab === 'home' ? styles.tabActive : ''}`} onClick={() => switchTab('home')}>
@@ -130,6 +133,7 @@ export default function Home() {
               </button>
             </>
           )}
+          </div>
         </div>
 
         <div className={styles.content}>
