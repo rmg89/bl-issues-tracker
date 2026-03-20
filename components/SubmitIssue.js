@@ -19,6 +19,10 @@ export default function SubmitIssue({ currentUser, onToast, onSubmitted }) {
 
   async function handleSubmit() {
     if (!title.trim()) { setError('Please enter a title.'); return }
+    if (!description.trim()) { setError('Please enter a description.'); return }
+    if (!location.trim()) { setError('Please enter a location or equipment.'); return }
+    if (!reportedVia) { setError('Please select who reported this.'); return }
+    if (reportedVia !== 'Staff (self)' && !reportedByName.trim()) { setError('Please enter the name.'); return }
     setSubmitting(true)
     setError('')
     try {
