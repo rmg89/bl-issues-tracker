@@ -6,7 +6,7 @@ export default async function handler(req, res) {
   if (req.method === 'PATCH') {
     const {
       status, urgency,
-      investigating, investigatingName,
+      investigating, investigatingName, investigatingBy, investigatingAt,
       manager, managerName,
       assignedTo, assignedBy, assignedAt, assignedEmail,
       realIssue, realIssueBy, realIssueAt,
@@ -20,6 +20,8 @@ export default async function handler(req, res) {
       if (urgency !== undefined) fields.Urgency = urgency
       if (investigating !== undefined) fields.Investigating = investigating
       if (investigatingName !== undefined) fields.InvestigatingName = investigatingName
+      if (investigatingBy !== undefined) fields.InvestigatingBy = investigatingBy
+      if (investigatingAt !== undefined) fields.InvestigatingAt = investigatingAt
       if (manager !== undefined) fields.Manager = manager
       if (managerName !== undefined) fields.ManagerName = managerName
       if (assignedTo !== undefined) fields.AssignedTo = JSON.stringify(Array.isArray(assignedTo) ? assignedTo : [assignedTo].filter(Boolean))

@@ -192,6 +192,31 @@ export default function IssueDetail({ issue, users, currentUser, locations, perm
     onToast(`Marked as ${STEP_LABELS[STEPS.indexOf(status)]}`)
   }
 
+  async function saveInvestigating(val) {
+    setInvestigating(val)
+    const u = users.find(u => u.username === val)
+    await patch({ investigating: val, investigatingName: u?.name || '', investigatingBy: currentUser.name, investigatingAt: new Date().toISOString() })
+    onToast('Saved')
+  }
+
+  async function saveManager(val) {
+    setManager(val)
+    const u = users.find(u => u.username === val)
+    await patch({ manager: val, managerName: u?.name || '' })
+    onToast('Saved')
+  }
+
+  async function saveAssignedTo(val) {
+    setAssignedTo(val)
+    await patch({
+      assignedTo: val,
+      assignedBy: currentUser.name,
+      assignedAt: new Date().toISOString(),
+      assignedEmail: val.map(u => users.find(x => x.username === u)?.email || '').filter(Boolean).join(','),
+    })
+    onToast('Saved')
+  }
+
   async function addNote() {
     if (!newNote.trim()) return
     const note = { text: newNote.trim(), authorName: currentUser.name, ts: new Date().toISOString() }
@@ -219,8 +244,8 @@ export default function IssueDetail({ issue, users, currentUser, locations, perm
         </div>
         {issue.description && <p className={styles.desc}>{issue.description}</p>}
         <div className={styles.chips}>
-          <LocationPill name={issue.locationName || issue.location} />
-          <span className={styles.chip}>By {issue.submittedByName || issue.submittedBy} · {fmtDate(issue.createdAt)} at {fmtTime(issue.createdAt)}</span>
+          <LocationPill name={issue.locationName} />
+          <span className={styles.chip}>By {issue.submittedByName || issue.submittedBy}{issue.location ? ` · ${issue.location}` : ''} · {fmtDate(issue.createdAt)} at {fmtTime(issue.createdAt)}</span>
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
             <span className={`${styles.urgencyTag} ${styles['u_' + urgency]}`}>{urgency} urgency</span>
             <span className={styles.changeUrgency}>
@@ -276,13 +301,16 @@ export default function IssueDetail({ issue, users, currentUser, locations, perm
         {divider}
 
         {/* ── 1. Who's looking into this ── */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 4 }}>
           <div className="section-label" style={{ marginTop: 0, marginBottom: 0, whiteSpace: 'nowrap' }}>Who&apos;s looking into this?</div>
-          <select value={investigating} onChange={e => setInvestigating(e.target.value)} style={{ marginBottom: 0, width: 'auto', minWidth: 140, maxWidth: 200 }}>
+          <select value={investigating} onChange={e => saveInvestigating(e.target.value)} style={{ marginBottom: 0, width: 'auto', minWidth: 140, maxWidth: 200 }}>
             <option value="">Unassigned</option>
             {managerUsers.map(u => <option key={u.id} value={u.username}>{u.name}</option>)}
           </select>
         </div>
+        {issue.investigatingBy && (
+          <div className={styles.fieldMeta} style={{ marginBottom: 12 }}>Set by {issue.investigatingBy} · {fmtDateTime(issue.investigatingAt)}</div>
+        )}
 
         {/* ── 2. Identify the real issue ── */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 6 }}>
@@ -367,14 +395,14 @@ export default function IssueDetail({ issue, users, currentUser, locations, perm
         <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
           <div style={{ flex: 1, minWidth: 160 }}>
             <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginBottom: 4 }}>Manager responsible</div>
-            <select value={manager} onChange={e => setManager(e.target.value)} style={{ marginBottom: 0 }}>
+            <select value={manager} onChange={e => saveManager(e.target.value)} style={{ marginBottom: 0 }}>
               <option value="">Unassigned</option>
               {managerUsers.map(u => <option key={u.id} value={u.username}>{u.name}</option>)}
             </select>
           </div>
           <div style={{ flex: 2, minWidth: 180 }}>
             <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginBottom: 4 }}>Assigned to (staff)</div>
-            <MultiSelectUsers value={assignedTo} onChange={setAssignedTo} users={users} />
+            <MultiSelectUsers value={assignedTo} onChange={saveAssignedTo} users={users} />
           </div>
         </div>
         {issue.assignedAt && (
