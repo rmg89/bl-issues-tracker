@@ -60,8 +60,8 @@ export default function MyIssues({ issues }) {
             </div>
             <div className={styles.meta}>
               <span className={styles.date}>Submitted {fmtDate(issue.createdAt)}</span>
-              {issue.locationName && (
-                <span className={styles.location}>{issue.locationName}</span>
+              {issue.location && (
+                <><span className={styles.dot}> · </span><span className={styles.location}>{issue.location}</span></>
               )}
             </div>
             {context && (

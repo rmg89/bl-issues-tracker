@@ -152,6 +152,7 @@ export default function IssueList({ issues, locations, onSelect, isAdmin, initia
                 {issue.urgency}
               </span>
               {submitter && <><span className={styles.dot}>·</span><span>By {submitter}</span></>}
+              {issue.location && <><span className={styles.dot}>·</span><span>{issue.location}</span></>}
               <span className={styles.metaBreak} />
               <span className={styles.metaDot}>·</span>
               <span className={styles.metaDate}>{fmtDateTime(issue.createdAt)}</span>
@@ -159,7 +160,7 @@ export default function IssueList({ issues, locations, onSelect, isAdmin, initia
           </div>
           <div className={styles.statusCol}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-              <LocationPill name={issue.locationName || issue.location} />
+              <LocationPill name={issue.locationName} />
               <span className={`status-badge s-${issue.status}`}>{STATUS_LABEL[issue.status]}</span>
             </div>
             {issue.status === 'solved' ? (

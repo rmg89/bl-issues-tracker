@@ -1,0 +1,39 @@
+.list { display: flex; flex-direction: column; gap: 10px; }
+
+.card {
+  background: var(--surface);
+  border: 0.5px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+}
+
+.top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+
+.title {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.meta {
+  display: flex;
+  align-items: center;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.date { color: var(--text-secondary); }
+.dot { color: var(--text-tertiary); margin: 0 4px; }
+.location { color: var(--text-secondary); }
+
+.context {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  margin-top: 4px;
+}

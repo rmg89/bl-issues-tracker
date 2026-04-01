@@ -111,16 +111,8 @@
   gap: 20px;
   align-items: flex-start;
 }
-
-.identifyLeft {
-  flex: 1;
-  min-width: 0;
-}
-
-.identifyRight {
-  width: 200px;
-  flex-shrink: 0;
-}
+.identifyLeft { flex: 1; min-width: 0; }
+.identifyRight { width: 200px; flex-shrink: 0; }
 
 @media (max-width: 640px) {
   .identifyRow { flex-direction: column; }

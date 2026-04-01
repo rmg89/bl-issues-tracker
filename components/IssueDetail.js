@@ -42,7 +42,7 @@ function MultiSelectUsers({ value, onChange, users }) {
         padding: '5px 10px', border: '0.5px solid var(--border-strong)',
         borderRadius: 'var(--radius)', background: 'var(--surface)', cursor: 'pointer',
       }}>
-        {value.length === 0 && <span style={{ fontSize: 13, color: 'var(--text-tertiary)' }}>Unassigned</span>}
+        {value.length === 0 && <span style={{ fontSize: 13, color: 'var(--text-tertiary)' }}>Select one or more…</span>}
         {value.map(username => {
           const u = users.find(u => u.username === username)
           return (
@@ -64,10 +64,10 @@ function MultiSelectUsers({ value, onChange, users }) {
       </div>
       {open && (
         <div style={{
-          position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50,
+          position: 'absolute', bottom: '100%', left: 0, right: 0, zIndex: 50,
           background: 'var(--surface)', border: '0.5px solid var(--border-strong)',
-          borderRadius: 'var(--radius)', boxShadow: '0 4px 16px rgba(0,0,0,0.1)',
-          marginTop: 4, maxHeight: 220, overflowY: 'auto',
+          borderRadius: 'var(--radius)', boxShadow: '0 -4px 16px rgba(0,0,0,0.1)',
+          marginBottom: 4, maxHeight: 220, overflowY: 'auto',
         }}>
           {users.map(u => (
             <div key={u.id} onClick={() => toggle(u.username)} style={{
@@ -275,37 +275,39 @@ export default function IssueDetail({ issue, users, currentUser, locations, perm
 
         {divider}
 
-        {/* ── 1 & 2. Identify + Who's looking (side by side) ── */}
-        <div className={styles.identifyRow}>
-          {/* Left: Identify the real issue */}
-          <div className={styles.identifyLeft}>
-            <div className="section-label" style={{ marginTop: 0 }}>Identify the real issue</div>
-            <textarea
-              placeholder="What is the actual root issue beneath the surface problem?"
-              value={realIssue}
-              onChange={e => setRealIssue(e.target.value)}
-              style={{ marginBottom: 4 }}
-            />
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 6 }}>
-              {issue.realIssueBy
-                ? <div className={styles.fieldMeta}>Last edited by {issue.realIssueBy} · {fmtDateTime(issue.realIssueAt)}</div>
-                : <div />}
-              <button onClick={async () => { await patch({ realIssue, realIssueBy: currentUser.name, realIssueAt: new Date().toISOString() }); onToast('Real issue saved') }}>Save</button>
-            </div>
-          </div>
+        {/* ── 1. Who's looking into this ── */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+          <div className="section-label" style={{ marginTop: 0, marginBottom: 0, whiteSpace: 'nowrap' }}>Who&apos;s looking into this?</div>
+          <select value={investigating} onChange={e => setInvestigating(e.target.value)} style={{ marginBottom: 0, width: 'auto', minWidth: 140, maxWidth: 200 }}>
+            <option value="">Unassigned</option>
+            {managerUsers.map(u => <option key={u.id} value={u.username}>{u.name}</option>)}
+          </select>
+        </div>
 
-          {/* Right: Who's looking into this */}
-          <div className={styles.identifyRight}>
-            <div className="section-label" style={{ marginTop: 0 }}>Who&apos;s looking into this?</div>
-            <select value={investigating} onChange={e => setInvestigating(e.target.value)} style={{ marginBottom: 0 }}>
-              <option value="">Unassigned</option>
-              {managerUsers.map(u => <option key={u.id} value={u.username}>{u.name}</option>)}
-            </select>
-            {issue.investigatingName && (
-              <div className={styles.fieldMeta}>Currently: {issue.investigatingName}</div>
+        {/* ── 2. Identify the real issue ── */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 6 }}>
+          <div className="section-label" style={{ marginTop: 0, marginBottom: 0 }}>Identify the real issue</div>
+          <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+            <button onClick={async () => { await patch({ realIssue, realIssueBy: currentUser.name, realIssueAt: new Date().toISOString() }); onToast('Real issue saved') }}>Save</button>
+            {issue.status === 'submitted' && (
+              <button
+                className="btn-primary"
+                onClick={() => markStatus('identified')}
+                disabled={!realIssue.trim()}
+                title={!realIssue.trim() ? 'Fill in the real issue first' : ''}
+              >Mark identified →</button>
             )}
           </div>
         </div>
+        <textarea
+          placeholder="What is the actual root issue beneath the surface problem?"
+          value={realIssue}
+          onChange={e => setRealIssue(e.target.value)}
+          style={{ marginBottom: 4 }}
+        />
+        {issue.realIssueBy && (
+          <div className={styles.fieldMeta}>{`Last edited by ${issue.realIssueBy} · ${fmtDateTime(issue.realIssueAt)}`}</div>
+        )}
 
         {divider}
 
@@ -329,75 +331,54 @@ export default function IssueDetail({ issue, users, currentUser, locations, perm
 
         {/* ── 4. Solution ── */}
         <div className="section-label" style={{ marginTop: 0 }}>Solution</div>
-        <textarea
-          placeholder="What is the fix? Who is actioning it and by when?"
-          value={solution}
-          onChange={e => setSolution(e.target.value)}
-          style={{ marginBottom: 4 }}
-        />
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 6 }}>
-          {issue.solutionBy
-            ? <div className={styles.fieldMeta}>Last edited by {issue.solutionBy} · {fmtDateTime(issue.solutionAt)}</div>
-            : <div />}
-          <button onClick={async () => { await patch({ solution, solutionBy: currentUser.name, solutionAt: new Date().toISOString() }); onToast('Solution saved') }}>Save</button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <textarea
+            placeholder="What is the fix? Who is actioning it and by when?"
+            value={solution}
+            onChange={e => setSolution(e.target.value)}
+            style={{ flex: 1, minHeight: 80, marginBottom: 0 }}
+          />
+          <button onClick={async () => { await patch({ solution, solutionBy: currentUser.name, solutionAt: new Date().toISOString() }); onToast('Solution saved') }}
+            style={{ alignSelf: 'flex-end', flexShrink: 0 }}>Save</button>
         </div>
+        {issue.solutionBy && (
+          <div className={styles.fieldMeta} style={{ marginTop: 4 }}>Last edited by {issue.solutionBy} · {fmtDateTime(issue.solutionAt)}</div>
+        )}
 
         {divider}
 
         {/* ── 5. Assign ── */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 6 }}>
           <div className="section-label" style={{ marginTop: 0, marginBottom: 0 }}>Assign</div>
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
             {!isSolvedOrArchived && (
               <button
+                className="btn-primary"
                 onClick={() => markStatus('assigned')}
                 disabled={assignedTo.length === 0}
                 title={assignedTo.length === 0 ? 'Assign someone first' : ''}
-              >
-                Mark assigned →
-              </button>
-            )}
-            {!isSolvedOrArchived && (
-              confirmSolve ? (
-                <>
-                  <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Fix done in real world?</span>
-                  <button
-                    style={{ background: '#2E7D32', borderColor: '#1B5E20', color: 'white' }}
-                    onClick={() => { setConfirmSolve(false); markStatus('solved') }}>
-                    Yes, solved ✓
-                  </button>
-                  <button onClick={() => setConfirmSolve(false)}>Cancel</button>
-                </>
-              ) : (
-                <button
-                  style={{ background: '#2E7D32', borderColor: '#1B5E20', color: 'white' }}
-                  onClick={() => setConfirmSolve(true)}>
-                  Mark solved ✓
-                </button>
-              )
+              >Mark assigned →</button>
             )}
             {issue.status === 'solved' && (
               <button onClick={archiveIssue}>Archive →</button>
             )}
           </div>
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <div>
-            <div className="section-label" style={{ marginTop: 0, marginBottom: 4, fontSize: 10 }}>Manager</div>
+        <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+          <div style={{ flex: 1, minWidth: 160 }}>
+            <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginBottom: 4 }}>Manager responsible</div>
             <select value={manager} onChange={e => setManager(e.target.value)} style={{ marginBottom: 0 }}>
               <option value="">Unassigned</option>
               {managerUsers.map(u => <option key={u.id} value={u.username}>{u.name}</option>)}
             </select>
           </div>
-          <div>
-            <div className="section-label" style={{ marginTop: 0, marginBottom: 4, fontSize: 10 }}>Assigned to</div>
+          <div style={{ flex: 2, minWidth: 180 }}>
+            <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginBottom: 4 }}>Assigned to (staff)</div>
             <MultiSelectUsers value={assignedTo} onChange={setAssignedTo} users={users} />
           </div>
         </div>
         {issue.assignedAt && (
-          <div className={styles.fieldMeta} style={{ marginTop: 4 }}>
-            Last updated by {issue.assignedBy} · {fmtDateTime(issue.assignedAt)}
-          </div>
+          <div className={styles.fieldMeta} style={{ marginTop: 6 }}>Last updated by {issue.assignedBy} · {fmtDateTime(issue.assignedAt)}</div>
         )}
 
       </div>
@@ -406,16 +387,6 @@ export default function IssueDetail({ issue, users, currentUser, locations, perm
       <div className={styles.floatBar}>
         <button onClick={onBack}>← Back</button>
         <div style={{ display: 'flex', gap: 8 }}>
-          {issue.status === 'submitted' && (
-            <button
-              className="btn-primary"
-              onClick={() => markStatus('identified')}
-              disabled={!realIssue.trim()}
-              title={!realIssue.trim() ? 'Fill in the real issue first' : ''}
-            >
-              Mark identified →
-            </button>
-          )}
           {!isSolvedOrArchived && (
             confirmSolve ? (
               <>
