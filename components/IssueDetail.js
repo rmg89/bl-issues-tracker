@@ -275,43 +275,36 @@ export default function IssueDetail({ issue, users, currentUser, locations, perm
 
         {divider}
 
-        {/* ── 1. Who's looking into this? ── */}
-        <div className="section-label" style={{ marginTop: 0 }}>Who's looking into this?</div>
-        <select value={investigating} onChange={e => setInvestigating(e.target.value)} style={{ marginBottom: 0 }}>
-          <option value="">Unassigned</option>
-          {managerUsers.map(u => <option key={u.id} value={u.username}>{u.name}</option>)}
-        </select>
-        {issue.investigatingName && (
-          <div className={styles.fieldMeta}>Currently: {issue.investigatingName}</div>
-        )}
+        {/* ── 1 & 2. Identify + Who's looking (side by side) ── */}
+        <div className={styles.identifyRow}>
+          {/* Left: Identify the real issue */}
+          <div className={styles.identifyLeft}>
+            <div className="section-label" style={{ marginTop: 0 }}>Identify the real issue</div>
+            <textarea
+              placeholder="What is the actual root issue beneath the surface problem?"
+              value={realIssue}
+              onChange={e => setRealIssue(e.target.value)}
+              style={{ marginBottom: 4 }}
+            />
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 6 }}>
+              {issue.realIssueBy
+                ? <div className={styles.fieldMeta}>Last edited by {issue.realIssueBy} · {fmtDateTime(issue.realIssueAt)}</div>
+                : <div />}
+              <button onClick={async () => { await patch({ realIssue, realIssueBy: currentUser.name, realIssueAt: new Date().toISOString() }); onToast('Real issue saved') }}>Save</button>
+            </div>
+          </div>
 
-        {divider}
-
-        {/* ── 2. Identify the real issue ── */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-          <div className="section-label" style={{ marginTop: 0, marginBottom: 0 }}>Identify the real issue</div>
-          {issue.status === 'submitted' && (
-            <button
-              className="btn-primary"
-              onClick={() => markStatus('identified')}
-              disabled={!realIssue.trim()}
-              title={!realIssue.trim() ? 'Fill in the real issue first' : ''}
-            >
-              Mark identified →
-            </button>
-          )}
-        </div>
-        <textarea
-          placeholder="What is the actual root issue beneath the surface problem?"
-          value={realIssue}
-          onChange={e => setRealIssue(e.target.value)}
-          style={{ marginBottom: 4 }}
-        />
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 6 }}>
-          {issue.realIssueBy
-            ? <div className={styles.fieldMeta}>Last edited by {issue.realIssueBy} · {fmtDateTime(issue.realIssueAt)}</div>
-            : <div />}
-          <button onClick={async () => { await patch({ realIssue, realIssueBy: currentUser.name, realIssueAt: new Date().toISOString() }); onToast('Real issue saved') }}>Save</button>
+          {/* Right: Who's looking into this */}
+          <div className={styles.identifyRight}>
+            <div className="section-label" style={{ marginTop: 0 }}>Who&apos;s looking into this?</div>
+            <select value={investigating} onChange={e => setInvestigating(e.target.value)} style={{ marginBottom: 0 }}>
+              <option value="">Unassigned</option>
+              {managerUsers.map(u => <option key={u.id} value={u.username}>{u.name}</option>)}
+            </select>
+            {issue.investigatingName && (
+              <div className={styles.fieldMeta}>Currently: {issue.investigatingName}</div>
+            )}
+          </div>
         </div>
 
         {divider}
@@ -413,6 +406,16 @@ export default function IssueDetail({ issue, users, currentUser, locations, perm
       <div className={styles.floatBar}>
         <button onClick={onBack}>← Back</button>
         <div style={{ display: 'flex', gap: 8 }}>
+          {issue.status === 'submitted' && (
+            <button
+              className="btn-primary"
+              onClick={() => markStatus('identified')}
+              disabled={!realIssue.trim()}
+              title={!realIssue.trim() ? 'Fill in the real issue first' : ''}
+            >
+              Mark identified →
+            </button>
+          )}
           {!isSolvedOrArchived && (
             confirmSolve ? (
               <>

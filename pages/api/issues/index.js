@@ -1,4 +1,4 @@
-import { IssuesTable, formatIssue } from '../../lib/airtable'
+import { IssuesTable, formatIssue } from '../../../lib/airtable'
 import formidable from 'formidable'
 import fs from 'fs'
 

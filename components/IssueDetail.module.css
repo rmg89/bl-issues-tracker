@@ -106,6 +106,27 @@
 
 .assignRow { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
 
+.identifyRow {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+}
+
+.identifyLeft {
+  flex: 1;
+  min-width: 0;
+}
+
+.identifyRight {
+  width: 200px;
+  flex-shrink: 0;
+}
+
+@media (max-width: 640px) {
+  .identifyRow { flex-direction: column; }
+  .identifyRight { width: 100%; }
+}
+
 .fieldMeta { font-size: 11px; color: var(--text-tertiary); margin: 0; padding: 0; display: block; line-height: 1.4; }
 .assignMeta { font-size: 11px; color: var(--text-tertiary); margin-top: 6px; margin-bottom: 0; }
 
