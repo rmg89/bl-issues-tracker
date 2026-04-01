@@ -1,5 +1,35 @@
 import styles from './Dashboard.module.css'
 
+const LOCATION_COLORS = [
+  { bg: '#E8EDF5', color: '#3D5A8A', border: '#C5D0E6' },
+  { bg: '#EAF2EA', color: '#2E6B3E', border: '#C0DBC5' },
+  { bg: '#F5ECE8', color: '#8A4A2F', border: '#E6CFC5' },
+  { bg: '#F5F0E8', color: '#7A5C1E', border: '#E6D9C0' },
+  { bg: '#E8F2F2', color: '#2A6B6B', border: '#C0DBDB' },
+  { bg: '#F0EAF5', color: '#5A3D8A', border: '#D5C5E6' },
+]
+function getLocationColor(name) {
+  if (!name) return LOCATION_COLORS[0]
+  let hash = 0
+  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash)
+  return LOCATION_COLORS[Math.abs(hash) % LOCATION_COLORS.length]
+}
+function LocationPill({ name }) {
+  if (!name) return null
+  const c = getLocationColor(name)
+  const display = name.length > 20 ? name.split(' ').slice(-1)[0] : name
+  return (
+    <span style={{
+      display: 'inline-flex', alignItems: 'center',
+      fontSize: 10, fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase',
+      padding: '2px 7px', borderRadius: 3,
+      border: `0.5px solid ${c.border}`, background: c.bg, color: c.color,
+      whiteSpace: 'nowrap', flexShrink: 0,
+    }} title={name}>{display}</span>
+  )
+}
+
+
 function fmtDate(str) {
   if (!str) return ''
   return new Date(str).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
@@ -43,16 +73,16 @@ function getLastAction(issue) {
 
 const STATUS_LABEL = {
   submitted: 'Submitted', identified: 'Identified',
-  discussing: 'Discussing', solved: 'Solved', archived: 'Archived'
+  assigned: 'Assigned', solved: 'Solved', archived: 'Archived'
 }
 
-export default function Dashboard({ issues, currentUser, onNavigate, onSelectIssue }) {
+export default function Dashboard({ issues, currentUser, activeLocation, onNavigate, onSelectIssue }) {
   const now = new Date()
   const oneWeekAgo = new Date(now - 7 * 24 * 60 * 60 * 1000)
 
   const active = issues.filter(i => i.status !== 'archived')
   const open = active.filter(i => i.status !== 'solved')
-  const unassigned = open.filter(i => !i.assignedTo || !String(i.assignedTo).trim())
+  const unassigned = open.filter(i => !i.assignedTo || (Array.isArray(i.assignedTo) ? i.assignedTo.length === 0 : !String(i.assignedTo).trim()))
   const highUrgency = open.filter(i => i.urgency === 'high')
 
   const getSolvedTs = (issue) => {
@@ -90,6 +120,7 @@ export default function Dashboard({ issues, currentUser, onNavigate, onSelectIss
     <div className={styles.wrap}>
       <div className={styles.greeting}>
         Good {new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 17 ? 'afternoon' : 'evening'}, {currentUser.name}.
+        {activeLocation && <span className={styles.locationLabel}>{activeLocation.name}</span>}
       </div>
 
       <div className={styles.stats}>
@@ -144,7 +175,10 @@ export default function Dashboard({ issues, currentUser, onNavigate, onSelectIss
                   <span className={styles.activityAction}>{action.what}</span> · {action.by} · {fmtDate(action.ts)} at {fmtTime(action.ts)}
                 </div>
               </div>
-              <span className={`status-badge s-${issue.status}`}>{STATUS_LABEL[issue.status]}</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0 }}>
+                <LocationPill name={issue.locationName || issue.location} />
+                <span className={`status-badge s-${issue.status}`}>{STATUS_LABEL[issue.status]}</span>
+              </div>
             </div>
           )
         })}

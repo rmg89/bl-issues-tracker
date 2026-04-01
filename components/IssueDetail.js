@@ -1,44 +1,140 @@
 import { useState } from 'react'
 import styles from './IssueDetail.module.css'
 
-const STEPS = ['submitted', 'identified', 'discussing', 'solved', 'archived']
-const STEP_LABELS = ['Submitted', 'Identified', 'Discussing', 'Solved', 'Archived']
+const LOCATION_COLORS = [
+  { bg: '#E8EDF5', color: '#3D5A8A', border: '#C5D0E6' },
+  { bg: '#EAF2EA', color: '#2E6B3E', border: '#C0DBC5' },
+  { bg: '#F5ECE8', color: '#8A4A2F', border: '#E6CFC5' },
+  { bg: '#F5F0E8', color: '#7A5C1E', border: '#E6D9C0' },
+  { bg: '#E8F2F2', color: '#2A6B6B', border: '#C0DBDB' },
+  { bg: '#F0EAF5', color: '#5A3D8A', border: '#D5C5E6' },
+]
+function getLocationColor(name) {
+  if (!name) return LOCATION_COLORS[0]
+  let hash = 0
+  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash)
+  return LOCATION_COLORS[Math.abs(hash) % LOCATION_COLORS.length]
+}
+function LocationPill({ name }) {
+  if (!name) return null
+  const c = getLocationColor(name)
+  const display = name.length > 20 ? name.split(' ').slice(-1)[0] : name
+  return (
+    <span style={{
+      display: 'inline-flex', alignItems: 'center',
+      fontSize: 10, fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase',
+      padding: '2px 7px', borderRadius: 3,
+      border: `0.5px solid ${c.border}`, background: c.bg, color: c.color,
+      whiteSpace: 'nowrap', flexShrink: 0,
+    }} title={name}>{display}</span>
+  )
+}
+
+function MultiSelectUsers({ value, onChange, users }) {
+  const [open, setOpen] = useState(false)
+  function toggle(username) {
+    onChange(value.includes(username) ? value.filter(u => u !== username) : [...value, username])
+  }
+  return (
+    <div style={{ position: 'relative' }}>
+      <div onClick={() => setOpen(o => !o)} style={{
+        display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 5, minHeight: 38,
+        padding: '5px 10px', border: '0.5px solid var(--border-strong)',
+        borderRadius: 'var(--radius)', background: 'var(--surface)', cursor: 'pointer',
+      }}>
+        {value.length === 0 && <span style={{ fontSize: 13, color: 'var(--text-tertiary)' }}>Unassigned</span>}
+        {value.map(username => {
+          const u = users.find(u => u.username === username)
+          return (
+            <span key={username} style={{
+              display: 'inline-flex', alignItems: 'center', gap: 4,
+              background: 'var(--bl-orange-light)', color: 'var(--bl-orange-dark)',
+              border: '0.5px solid var(--bl-orange)', borderRadius: 20,
+              fontSize: 12, fontWeight: 500, padding: '2px 8px',
+            }}>
+              {u?.name || username}
+              <span onClick={e => { e.stopPropagation(); toggle(username) }}
+                style={{ cursor: 'pointer', opacity: 0.6, fontWeight: 700, fontSize: 13, lineHeight: 1 }}>×</span>
+            </span>
+          )
+        })}
+        <span style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--text-tertiary)', paddingLeft: 4 }}>
+          {open ? '▲' : '▼'}
+        </span>
+      </div>
+      {open && (
+        <div style={{
+          position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 50,
+          background: 'var(--surface)', border: '0.5px solid var(--border-strong)',
+          borderRadius: 'var(--radius)', boxShadow: '0 4px 16px rgba(0,0,0,0.1)',
+          marginTop: 4, maxHeight: 220, overflowY: 'auto',
+        }}>
+          {users.map(u => (
+            <div key={u.id} onClick={() => toggle(u.username)} style={{
+              display: 'flex', alignItems: 'center', gap: 10, padding: '9px 14px',
+              cursor: 'pointer', fontSize: 13,
+              background: value.includes(u.username) ? 'var(--bl-orange-light)' : 'transparent',
+              color: value.includes(u.username) ? 'var(--bl-orange-dark)' : 'var(--text)',
+            }}>
+              <span style={{
+                width: 16, height: 16, borderRadius: 4, flexShrink: 0,
+                border: `1.5px solid ${value.includes(u.username) ? 'var(--bl-orange)' : 'var(--border-strong)'}`,
+                background: value.includes(u.username) ? 'var(--bl-orange)' : 'transparent',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: 'white', fontSize: 10, fontWeight: 700,
+              }}>{value.includes(u.username) ? '✓' : ''}</span>
+              {u.name}
+              {(u.isAdmin || (u.locationRoles || []).some(r => r.role === 'manager')) && (
+                <span style={{ fontSize: 10, color: 'var(--text-tertiary)', marginLeft: 'auto' }}>manager</span>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+const STEPS = ['submitted', 'identified', 'assigned', 'solved', 'archived']
+const STEP_LABELS = ['Submitted', 'Identified', 'Assigned', 'Solved', 'Archived']
 
 function fmtDateTime(str) {
   if (!str) return ''
   return new Date(str).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-    + ' at '
-    + new Date(str).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+    + ' at ' + new Date(str).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
 }
-
 function fmtDate(str) {
   if (!str) return ''
   return new Date(str).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 }
-
 function fmtTime(str) {
   if (!str) return ''
   return new Date(str).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
 }
 
-export default function IssueDetail({ issue, users, currentUser, onBack, onUpdate, onToast }) {
-  const [realIssue, setRealIssue] = useState(issue.realIssue)
-  const [solution, setSolution] = useState(issue.solution)
-  const [assignedTo, setAssignedTo] = useState(issue.assignedTo)
-  const [assignedChanged, setAssignedChanged] = useState(false)
-  const [urgency, setUrgency] = useState(issue.urgency)
+const divider = <div style={{ borderTop: '0.5px solid var(--border)', margin: '1rem 0' }} />
+
+export default function IssueDetail({ issue, users, currentUser, locations, permissions, onBack, onUpdate, onToast }) {
+  const [realIssue, setRealIssue] = useState(issue.realIssue || '')
+  const [solution, setSolution] = useState(issue.solution || '')
+  const [urgency, setUrgency] = useState(issue.urgency || 'medium')
   const [newNote, setNewNote] = useState('')
   const [saving, setSaving] = useState(false)
+  const [confirmSolve, setConfirmSolve] = useState(false)
+  const [investigating, setInvestigating] = useState(issue.investigating || '')
+  const [manager, setManager] = useState(issue.manager || '')
+  const [assignedTo, setAssignedTo] = useState(
+    Array.isArray(issue.assignedTo) ? issue.assignedTo : issue.assignedTo ? [issue.assignedTo] : []
+  )
 
   const si = STEPS.indexOf(issue.status)
   const rawLog = issue.statusLog || []
-  // Auto-populate submitted entry from createdAt if not already in log
   const statusLog = rawLog.find(l => l.status === 'submitted')
     ? rawLog
     : [{ status: 'submitted', ts: issue.createdAt, by: issue.submittedByName || issue.submittedBy }, ...rawLog]
 
-  // Only show admins in the assign dropdown
-  const adminUsers = users.filter(u => u.isAdmin)
+  const managerUsers = users.filter(u => u.isAdmin || (u.locationRoles || []).some(r => r.role === 'manager'))
+  const isSolvedOrArchived = issue.status === 'solved' || issue.status === 'archived'
 
   async function patch(fields) {
     const res = await fetch(`/api/issues/${issue.id}`, {
@@ -51,6 +147,8 @@ export default function IssueDetail({ issue, users, currentUser, onBack, onUpdat
     return updated
   }
 
+  function getLogEntry(s) { return statusLog.find(l => l.status === s) }
+
   async function advanceStatus(s) {
     const newLog = statusLog.filter(l => l.status !== s)
     newLog.push({ status: s, ts: new Date().toISOString(), by: currentUser.name })
@@ -58,35 +156,40 @@ export default function IssueDetail({ issue, users, currentUser, onBack, onUpdat
     onToast('Status updated')
   }
 
-  function getLogEntry(s) {
-    return statusLog.find(l => l.status === s)
-  }
-
-  async function saveEdits() {
-    setSaving(true)
-    const fields = {
-      realIssue,
-      solution,
+  function coreFields() {
+    const investigatingUser = users.find(u => u.username === investigating)
+    const managerUser = users.find(u => u.username === manager)
+    return {
       urgency,
+      investigating,
+      investigatingName: investigatingUser?.name || '',
+      manager,
+      managerName: managerUser?.name || '',
+      assignedTo,
+      assignedBy: currentUser.name,
+      assignedAt: new Date().toISOString(),
+      assignedEmail: assignedTo.map(u => users.find(x => x.username === u)?.email || '').filter(Boolean).join(','),
+      realIssue,
       realIssueBy: realIssue !== issue.realIssue ? currentUser.name : issue.realIssueBy,
       realIssueAt: realIssue !== issue.realIssue ? new Date().toISOString() : issue.realIssueAt,
+      solution,
       solutionBy: solution !== issue.solution ? currentUser.name : issue.solutionBy,
       solutionAt: solution !== issue.solution ? new Date().toISOString() : issue.solutionAt,
     }
+  }
 
-    if (assignedChanged) {
-      const assignedUser = users.find(u => u.username === assignedTo)
-      fields.assignedTo = assignedTo
-      fields.assignedBy = currentUser.name
-      fields.assignedAt = new Date().toISOString()
-      fields.assignedEmail = assignedUser?.email || ''
-    } else {
-      fields.assignedTo = assignedTo
-    }
-
-    await patch(fields)
+  async function saveAll() {
+    setSaving(true)
+    await patch(coreFields())
     setSaving(false)
     onToast('Changes saved')
+  }
+
+  async function markStatus(status) {
+    const newLog = statusLog.filter(l => l.status !== status)
+    newLog.push({ status, ts: new Date().toISOString(), by: currentUser.name })
+    await patch({ ...coreFields(), status, statusLog: newLog })
+    onToast(`Marked as ${STEP_LABELS[STEPS.indexOf(status)]}`)
   }
 
   async function addNote() {
@@ -101,34 +204,29 @@ export default function IssueDetail({ issue, users, currentUser, onBack, onUpdat
     const newLog = statusLog.filter(l => l.status !== 'archived')
     newLog.push({ status: 'archived', ts: new Date().toISOString(), by: currentUser.name })
     await patch({ status: 'archived', statusLog: newLog })
-    onToast('Issue archived')
+    onToast('Archived')
     onBack()
   }
 
   return (
     <div>
       <div className="card">
+
+        {/* ── Header ── */}
         <div className={styles.topRow}>
           <h2 className={styles.title}>{issue.title}</h2>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
-            <span className={`status-badge s-${issue.status}`}>{STEP_LABELS[si]}</span>
-          </div>
+          <span className={`status-badge s-${issue.status}`}>{STEP_LABELS[si] || issue.status}</span>
         </div>
-
         {issue.description && <p className={styles.desc}>{issue.description}</p>}
-
         <div className={styles.chips}>
-          {issue.location && <span className={styles.chip}>{issue.location}</span>}
+          <LocationPill name={issue.locationName || issue.location} />
           <span className={styles.chip}>By {issue.submittedByName || issue.submittedBy} · {fmtDate(issue.createdAt)} at {fmtTime(issue.createdAt)}</span>
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
             <span className={`${styles.urgencyTag} ${styles['u_' + urgency]}`}>{urgency} urgency</span>
             <span className={styles.changeUrgency}>
               change
-              <select
-                value={urgency}
-                onChange={e => setUrgency(e.target.value)}
-                style={{ position: 'absolute', opacity: 0, width: '140px', height: '100%', top: 0, left: 0, cursor: 'pointer' }}
-              >
+              <select value={urgency} onChange={e => setUrgency(e.target.value)}
+                style={{ position: 'absolute', opacity: 0, width: '140px', height: '100%', top: 0, left: 0, cursor: 'pointer' }}>
                 <option value="low">Low urgency</option>
                 <option value="medium">Medium urgency</option>
                 <option value="high">High urgency</option>
@@ -137,118 +235,208 @@ export default function IssueDetail({ issue, users, currentUser, onBack, onUpdat
           </span>
         </div>
         {issue.reportedVia && (
-          <div style={{ marginTop: 8 }}>
+          <div style={{ marginTop: 6 }}>
             <span className={styles.chip}>
               Reported by {issue.reportedVia}{issue.reportedByName ? `: ${issue.reportedByName}` : ''}
             </span>
           </div>
         )}
 
-        {issue.photos && issue.photos.length > 0 && (
+        {/* ── Photos ── */}
+        {issue.photos?.length > 0 && (
           <>
-            <div className="section-label" style={{ marginTop: '1.25rem' }}>Photos</div>
-            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: '1.25rem' }}>
+            <div className="section-label" style={{ marginTop: '1rem' }}>Photos</div>
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
               {issue.photos.map((photo, i) => (
                 <a key={i} href={photo.url} target="_blank" rel="noopener noreferrer">
-                  <img
-                    src={photo.url}
-                    alt={photo.filename || `Photo ${i + 1}`}
-                    style={{ width: 120, height: 90, objectFit: 'cover', borderRadius: 8, border: '0.5px solid var(--border)', cursor: 'pointer' }}
-                  />
+                  <img src={photo.url} alt={photo.filename || `Photo ${i + 1}`}
+                    style={{ width: 120, height: 90, objectFit: 'cover', borderRadius: 8, border: '0.5px solid var(--border)' }} />
                 </a>
               ))}
             </div>
           </>
         )}
 
-        <div className="section-label" style={{ marginTop: '1.25rem' }}>Issue progress</div>
+        {/* ── Status track ── */}
+        <div className="section-label" style={{ marginTop: '1rem' }}>Issue progress</div>
         <div className={styles.track}>
           {STEPS.map((s, i) => {
             const log = getLogEntry(s)
             return (
-              <button
-                key={s}
+              <button key={s}
                 className={`${styles.step} ${i < si ? styles.done : ''} ${i === si ? styles.active : ''}`}
-                onClick={() => advanceStatus(s)}
-              >
+                onClick={() => advanceStatus(s)}>
                 <span className={styles.stepLabel}>{STEP_LABELS[i]}</span>
-                {log && (
-                  <span className={styles.stepTs}>
-                    {fmtDate(log.ts)}<br />{fmtTime(log.ts)}<br />by {log.by}
-                  </span>
-                )}
+                {log && <span className={styles.stepTs}>{fmtDate(log.ts)}<br />{fmtTime(log.ts)}<br />by {log.by}</span>}
               </button>
             )
           })}
         </div>
 
-        <div className="section-label" style={{ marginTop: '1.25rem' }}>Assign owner</div>
-        <div className={styles.assignRow}>
-          <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Owned by:</span>
-          <select value={assignedTo} onChange={e => { setAssignedTo(e.target.value); setAssignedChanged(true) }} style={{ flex: 1, marginBottom: 0 }}>
-            <option value="">Unassigned</option>
-            {adminUsers.map(u => <option key={u.id} value={u.username}>{u.name}</option>)}
-          </select>
-        </div>
-        {issue.assignedBy && (
-          <div className={styles.fieldMeta}>
-            Assigned by {issue.assignedBy} · {fmtDateTime(issue.assignedAt)}
-          </div>
+        {divider}
+
+        {/* ── 1. Who's looking into this? ── */}
+        <div className="section-label" style={{ marginTop: 0 }}>Who's looking into this?</div>
+        <select value={investigating} onChange={e => setInvestigating(e.target.value)} style={{ marginBottom: 0 }}>
+          <option value="">Unassigned</option>
+          {managerUsers.map(u => <option key={u.id} value={u.username}>{u.name}</option>)}
+        </select>
+        {issue.investigatingName && (
+          <div className={styles.fieldMeta}>Currently: {issue.investigatingName}</div>
         )}
 
-        <div className="section-label" style={{ marginTop: '0.75rem' }}>Identify — real issue</div>
+        {divider}
+
+        {/* ── 2. Identify the real issue ── */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+          <div className="section-label" style={{ marginTop: 0, marginBottom: 0 }}>Identify the real issue</div>
+          {issue.status === 'submitted' && (
+            <button
+              className="btn-primary"
+              onClick={() => markStatus('identified')}
+              disabled={!realIssue.trim()}
+              title={!realIssue.trim() ? 'Fill in the real issue first' : ''}
+            >
+              Mark identified →
+            </button>
+          )}
+        </div>
         <textarea
           placeholder="What is the actual root issue beneath the surface problem?"
           value={realIssue}
           onChange={e => setRealIssue(e.target.value)}
-          style={{ marginBottom: '4px' }}
+          style={{ marginBottom: 4 }}
         />
-        {issue.realIssueBy && (
-          <div className={styles.fieldMeta}>
-            Last edited by {issue.realIssueBy} · {fmtDateTime(issue.realIssueAt)}
-          </div>
-        )}
-        <div className="section-label" style={{ marginTop: '1rem' }}>Discuss — notes</div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 6 }}>
+          {issue.realIssueBy
+            ? <div className={styles.fieldMeta}>Last edited by {issue.realIssueBy} · {fmtDateTime(issue.realIssueAt)}</div>
+            : <div />}
+          <button onClick={async () => { await patch({ realIssue, realIssueBy: currentUser.name, realIssueAt: new Date().toISOString() }); onToast('Real issue saved') }}>Save</button>
+        </div>
+
+        {divider}
+
+        {/* ── 3. Discuss ── */}
+        <div className="section-label" style={{ marginTop: 0 }}>Discuss</div>
         <div className={styles.notes}>
           {issue.notes.length ? issue.notes.map((n, i) => (
             <div key={i} className={styles.note}>
               <div className={styles.noteText}>{n.text}</div>
               <div className={styles.noteMeta}>{n.authorName} · {fmtDateTime(n.ts)}</div>
             </div>
-          )) : (
-            <div className={styles.noNotes}>No discussion yet.</div>
-          )}
+          )) : <div className={styles.noNotes}>No notes yet.</div>}
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <textarea
-            placeholder="Add a note or discussion point..."
-            value={newNote}
-            onChange={e => setNewNote(e.target.value)}
-            style={{ flex: 1, minHeight: 64 }}
-          />
+        <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+          <textarea placeholder="Add a note or discussion point..." value={newNote}
+            onChange={e => setNewNote(e.target.value)} style={{ flex: 1, minHeight: 64, marginBottom: 0 }} />
           <button onClick={addNote} style={{ alignSelf: 'flex-end', flexShrink: 0 }}>Add</button>
         </div>
 
-        <div className="section-label" style={{ marginTop: '0.5rem' }}>Solve — resolution</div>
+        {divider}
+
+        {/* ── 4. Solution ── */}
+        <div className="section-label" style={{ marginTop: 0 }}>Solution</div>
         <textarea
-          placeholder="What is the agreed solution? Who will action it and by when?"
+          placeholder="What is the fix? Who is actioning it and by when?"
           value={solution}
           onChange={e => setSolution(e.target.value)}
-          style={{ marginBottom: '4px' }}
+          style={{ marginBottom: 4 }}
         />
-        {issue.solutionBy && (
-          <div className={styles.fieldMeta}>
-            Last edited by {issue.solutionBy} · {fmtDateTime(issue.solutionAt)}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 6 }}>
+          {issue.solutionBy
+            ? <div className={styles.fieldMeta}>Last edited by {issue.solutionBy} · {fmtDateTime(issue.solutionAt)}</div>
+            : <div />}
+          <button onClick={async () => { await patch({ solution, solutionBy: currentUser.name, solutionAt: new Date().toISOString() }); onToast('Solution saved') }}>Save</button>
+        </div>
+
+        {divider}
+
+        {/* ── 5. Assign ── */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+          <div className="section-label" style={{ marginTop: 0, marginBottom: 0 }}>Assign</div>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+            {!isSolvedOrArchived && (
+              <button
+                onClick={() => markStatus('assigned')}
+                disabled={assignedTo.length === 0}
+                title={assignedTo.length === 0 ? 'Assign someone first' : ''}
+              >
+                Mark assigned →
+              </button>
+            )}
+            {!isSolvedOrArchived && (
+              confirmSolve ? (
+                <>
+                  <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>Fix done in real world?</span>
+                  <button
+                    style={{ background: '#2E7D32', borderColor: '#1B5E20', color: 'white' }}
+                    onClick={() => { setConfirmSolve(false); markStatus('solved') }}>
+                    Yes, solved ✓
+                  </button>
+                  <button onClick={() => setConfirmSolve(false)}>Cancel</button>
+                </>
+              ) : (
+                <button
+                  style={{ background: '#2E7D32', borderColor: '#1B5E20', color: 'white' }}
+                  onClick={() => setConfirmSolve(true)}>
+                  Mark solved ✓
+                </button>
+              )
+            )}
+            {issue.status === 'solved' && (
+              <button onClick={archiveIssue}>Archive →</button>
+            )}
+          </div>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div>
+            <div className="section-label" style={{ marginTop: 0, marginBottom: 4, fontSize: 10 }}>Manager</div>
+            <select value={manager} onChange={e => setManager(e.target.value)} style={{ marginBottom: 0 }}>
+              <option value="">Unassigned</option>
+              {managerUsers.map(u => <option key={u.id} value={u.username}>{u.name}</option>)}
+            </select>
+          </div>
+          <div>
+            <div className="section-label" style={{ marginTop: 0, marginBottom: 4, fontSize: 10 }}>Assigned to</div>
+            <MultiSelectUsers value={assignedTo} onChange={setAssignedTo} users={users} />
+          </div>
+        </div>
+        {issue.assignedAt && (
+          <div className={styles.fieldMeta} style={{ marginTop: 4 }}>
+            Last updated by {issue.assignedBy} · {fmtDateTime(issue.assignedAt)}
           </div>
         )}
 
       </div>
 
+      {/* ── Float bar ── */}
       <div className={styles.floatBar}>
         <button onClick={onBack}>← Back</button>
-        <button className={`btn-primary ${styles.saveBtn}`} onClick={saveEdits} disabled={saving}>
-          {saving ? 'Saving...' : 'Save changes'}
-        </button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          {!isSolvedOrArchived && (
+            confirmSolve ? (
+              <>
+                <span style={{ fontSize: 13, color: 'var(--text-secondary)', alignSelf: 'center' }}>Fix done in real world?</span>
+                <button style={{ background: '#2E7D32', borderColor: '#1B5E20', color: 'white' }}
+                  onClick={() => { setConfirmSolve(false); markStatus('solved') }}>
+                  Yes, solved ✓
+                </button>
+                <button onClick={() => setConfirmSolve(false)}>Cancel</button>
+              </>
+            ) : (
+              <button style={{ background: '#2E7D32', borderColor: '#1B5E20', color: 'white' }}
+                onClick={() => setConfirmSolve(true)}>
+                Mark solved ✓
+              </button>
+            )
+          )}
+          {issue.status === 'solved' && (
+            <button onClick={archiveIssue}>Archive →</button>
+          )}
+          <button className={`btn-primary ${styles.saveBtn}`} onClick={saveAll} disabled={saving}>
+            {saving ? 'Saving...' : 'Save changes'}
+          </button>
+        </div>
       </div>
     </div>
   )

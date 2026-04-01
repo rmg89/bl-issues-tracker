@@ -162,3 +162,10 @@
   color: var(--text-tertiary);
   margin-top: 1px;
 }
+.locationLabel {
+  display: block;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--text-tertiary);
+  margin-top: 2px;
+}

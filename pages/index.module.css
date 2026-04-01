@@ -200,3 +200,30 @@
     max-width: 100%;
   }
 }
+.locationSelect {
+  font-size: 13px;
+  padding: 5px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  cursor: pointer;
+  max-width: 160px;
+}
+
+.locationBadge {
+  font-size: 12px;
+  color: var(--text-secondary);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 4px 10px;
+}
+
+@media (max-width: 600px) {
+  .locationSelect {
+    max-width: 110px;
+    font-size: 12px;
+    padding: 4px 8px;
+  }
+}

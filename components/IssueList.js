@@ -1,6 +1,36 @@
 import { useState, useMemo } from 'react'
 import styles from './IssueList.module.css'
 
+const LOCATION_COLORS = [
+  { bg: '#E8EDF5', color: '#3D5A8A', border: '#C5D0E6' },
+  { bg: '#EAF2EA', color: '#2E6B3E', border: '#C0DBC5' },
+  { bg: '#F5ECE8', color: '#8A4A2F', border: '#E6CFC5' },
+  { bg: '#F5F0E8', color: '#7A5C1E', border: '#E6D9C0' },
+  { bg: '#E8F2F2', color: '#2A6B6B', border: '#C0DBDB' },
+  { bg: '#F0EAF5', color: '#5A3D8A', border: '#D5C5E6' },
+]
+function getLocationColor(name) {
+  if (!name) return LOCATION_COLORS[0]
+  let hash = 0
+  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash)
+  return LOCATION_COLORS[Math.abs(hash) % LOCATION_COLORS.length]
+}
+function LocationPill({ name }) {
+  if (!name) return null
+  const c = getLocationColor(name)
+  const display = name.length > 20 ? name.split(' ').slice(-1)[0] : name
+  return (
+    <span style={{
+      display: 'inline-flex', alignItems: 'center',
+      fontSize: 10, fontWeight: 600, letterSpacing: '0.04em', textTransform: 'uppercase',
+      padding: '2px 7px', borderRadius: 3,
+      border: `0.5px solid ${c.border}`, background: c.bg, color: c.color,
+      whiteSpace: 'nowrap', flexShrink: 0,
+    }} title={name}>{display}</span>
+  )
+}
+
+
 function fmtDateTime(str) {
   if (!str) return ''
   return new Date(str).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
@@ -25,11 +55,11 @@ function daysToResolve(createdAt, statusLog) {
 
 const STATUS_LABEL = {
   submitted: 'Submitted', identified: 'Identified',
-  discussing: 'Discussing', solved: 'Solved', archived: 'Archived'
+  assigned: 'Assigned', solved: 'Solved', archived: 'Archived'
 }
 
 const URGENCY_ORDER = { high: 0, medium: 1, low: 2 }
-const STATUS_ORDER = { submitted: 0, identified: 1, discussing: 2, solved: 3, archived: 4 }
+const STATUS_ORDER = { submitted: 0, identified: 1, assigned: 2, solved: 3, archived: 4 }
 
 const GROUP_LABELS = {
   new: 'New — awaiting review',
@@ -39,7 +69,7 @@ const GROUP_LABELS = {
   medium: 'Medium urgency',
   low: 'Low urgency',
   submitted: 'Submitted', identified: 'Identified',
-  discussing: 'Discussing', solved: 'Solved', archived: 'Archived'
+  assigned: 'Assigned', solved: 'Solved', archived: 'Archived'
 }
 
 function getGroupKey(issue, sortBy) {
@@ -53,7 +83,7 @@ function getGroupKey(issue, sortBy) {
   return null
 }
 
-export default function IssueList({ issues, onSelect, isAdmin, initialSort, currentUser }) {
+export default function IssueList({ issues, locations, onSelect, isAdmin, initialSort, initialFilter, currentUser }) {
   const [search, setSearch] = useState('')
   const [sortBy, setSortBy] = useState(initialSort || 'newest')
   const [showArchived, setShowArchived] = useState(false)
@@ -121,7 +151,6 @@ export default function IssueList({ issues, onSelect, isAdmin, initialSort, curr
               <span className={`${styles.urgencyTag} ${styles['u_' + issue.urgency]}`}>
                 {issue.urgency}
               </span>
-              {issue.location && <><span className={styles.dot}>·</span><span>{issue.location}</span></>}
               {submitter && <><span className={styles.dot}>·</span><span>By {submitter}</span></>}
               <span className={styles.metaBreak} />
               <span className={styles.metaDot}>·</span>
@@ -129,9 +158,10 @@ export default function IssueList({ issues, onSelect, isAdmin, initialSort, curr
             </div>
           </div>
           <div className={styles.statusCol}>
-            <span className={`status-badge s-${issue.status}`}>
-              {STATUS_LABEL[issue.status]}
-            </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+              <LocationPill name={issue.locationName || issue.location} />
+              <span className={`status-badge s-${issue.status}`}>{STATUS_LABEL[issue.status]}</span>
+            </div>
             {issue.status === 'solved' ? (
               <span className={styles.daysResolved}>
                 Resolved in {daysToResolve(issue.createdAt, issue.statusLog) ?? daysSince(issue.createdAt)}d

@@ -164,3 +164,13 @@ label {
   white-space: nowrap;
 }
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+.manager-tag {
+  font-size: 10px;
+  font-weight: 600;
+  background: #E3F2FD;
+  color: #1565C0;
+  padding: 2px 7px;
+  border-radius: 20px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}

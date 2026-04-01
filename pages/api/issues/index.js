@@ -6,8 +6,16 @@ export const config = { api: { bodyParser: false } }
 
 export default async function handler(req, res) {
   if (req.method === 'GET') {
+    const { locationId } = req.query
     try {
-      const records = await IssuesTable.select().all()
+      let formula = ''
+      if (locationId && locationId !== 'all') {
+        formula = `{LocationId} = '${locationId}'`
+      }
+      const query = formula
+        ? IssuesTable.select({ filterByFormula: formula })
+        : IssuesTable.select()
+      const records = await query.all()
       const issues = records.map(formatIssue)
       issues.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
       return res.status(200).json(issues)
@@ -26,7 +34,8 @@ export default async function handler(req, res) {
       const title = get('title')
       const description = get('description')
       const urgency = get('urgency')
-      const location = get('location')
+      const locationId = get('locationId')
+      const locationName = get('locationName')
       const submittedBy = get('submittedBy')
       const submittedByName = get('submittedByName')
       const reportedVia = get('reportedVia')
@@ -44,15 +53,14 @@ export default async function handler(req, res) {
         }
         if (description) airtableFields.Description = description
         if (urgency) airtableFields.Urgency = urgency
-        if (location) airtableFields.Location = location
+        if (locationId) airtableFields.LocationId = locationId
+        if (locationName) airtableFields.LocationName = locationName
         if (reportedVia) airtableFields.ReportedVia = reportedVia
         if (reportedByName) airtableFields.ReportedByName = reportedByName
 
-        // First create the record without photos
         const record = await IssuesTable.create(airtableFields)
         const recordId = record.id
 
-        // Then upload photos separately using Airtable's upload attachment endpoint
         const photoFiles = files.photos
           ? (Array.isArray(files.photos) ? files.photos : [files.photos])
           : []
@@ -77,7 +85,6 @@ export default async function handler(req, res) {
           }
         }
 
-        // Fetch the updated record with photos
         const updatedRecord = await IssuesTable.find(recordId)
         return res.status(200).json(formatIssue(updatedRecord))
       } catch (err) {

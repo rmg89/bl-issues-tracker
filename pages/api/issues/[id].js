@@ -6,17 +6,23 @@ export default async function handler(req, res) {
   if (req.method === 'PATCH') {
     const {
       status, urgency,
+      investigating, investigatingName,
+      manager, managerName,
       assignedTo, assignedBy, assignedAt, assignedEmail,
       realIssue, realIssueBy, realIssueAt,
       solution, solutionBy, solutionAt,
       notes, statusLog,
-      reportedVia, reportedByName
+      reportedVia, reportedByName,
     } = req.body
     try {
       const fields = {}
       if (status !== undefined) fields.Status = status
       if (urgency !== undefined) fields.Urgency = urgency
-      if (assignedTo !== undefined) fields.AssignedTo = assignedTo
+      if (investigating !== undefined) fields.Investigating = investigating
+      if (investigatingName !== undefined) fields.InvestigatingName = investigatingName
+      if (manager !== undefined) fields.Manager = manager
+      if (managerName !== undefined) fields.ManagerName = managerName
+      if (assignedTo !== undefined) fields.AssignedTo = JSON.stringify(Array.isArray(assignedTo) ? assignedTo : [assignedTo].filter(Boolean))
       if (assignedBy !== undefined) fields.AssignedBy = assignedBy
       if (assignedAt !== undefined) fields.AssignedAt = assignedAt
       if (assignedEmail !== undefined) fields.AssignedEmail = assignedEmail
@@ -30,6 +36,7 @@ export default async function handler(req, res) {
       if (statusLog !== undefined) fields.StatusLog = JSON.stringify(statusLog)
       if (reportedVia !== undefined) fields.ReportedVia = reportedVia
       if (reportedByName !== undefined) fields.ReportedByName = reportedByName
+
       const record = await IssuesTable.update(id, fields)
       return res.status(200).json(formatIssue(record))
     } catch (err) {

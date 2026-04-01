@@ -1,10 +1,11 @@
 import { useState } from 'react'
 
-export default function SubmitIssue({ currentUser, onToast, onSubmitted }) {
+export default function SubmitIssue({ currentUser, locations, activeLocationId, activeLocationName, onToast, onSubmitted }) {
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [urgency, setUrgency] = useState('medium')
-  const [location, setLocation] = useState('')
+  const [locationId, setLocationId] = useState(activeLocationId || '')
+  const [equipment, setEquipment] = useState('')
   const [photos, setPhotos] = useState([])
   const [reportedVia, setReportedVia] = useState('')
   const [reportedByName, setReportedByName] = useState('')
@@ -12,17 +13,23 @@ export default function SubmitIssue({ currentUser, onToast, onSubmitted }) {
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState('')
 
+  const selectedLocation = locations?.find(l => l.id === locationId)
+  // Build a display name: "Location Name — equipment/area" if equipment filled
+  const fullLocationName = selectedLocation
+    ? (equipment.trim() ? `${selectedLocation.name} — ${equipment.trim()}` : selectedLocation.name)
+    : equipment.trim()
+
   function handlePhotoChange(e) {
-    const files = Array.from(e.target.files)
-    setPhotos(files)
+    setPhotos(Array.from(e.target.files))
   }
 
   async function handleSubmit() {
     if (!title.trim()) { setError('Please enter a title.'); return }
     if (!description.trim()) { setError('Please enter a description.'); return }
-    if (!location.trim()) { setError('Please enter a location or equipment.'); return }
+    if (!locationId && !equipment.trim()) { setError('Please select a location or describe the equipment/area.'); return }
     if (!reportedVia) { setError('Please select who reported this.'); return }
-    if (reportedVia !== 'Staff (self)' && !reportedByName.trim()) { setError('Please enter the name.'); return }
+    if (reportedVia !== 'Staff (self)' && !reportedByName.trim()) { setError('Please enter the reporter\'s name.'); return }
+
     setSubmitting(true)
     setError('')
     try {
@@ -30,21 +37,21 @@ export default function SubmitIssue({ currentUser, onToast, onSubmitted }) {
       formData.append('title', title.trim())
       formData.append('description', description.trim())
       formData.append('urgency', urgency)
-      formData.append('location', location.trim())
+      formData.append('locationId', locationId || '')
+      formData.append('locationName', fullLocationName)
       formData.append('submittedBy', currentUser.username)
       formData.append('submittedByName', currentUser.name)
       formData.append('reportedVia', reportedVia)
-      formData.append('reportedByName', reportedByName)
+      formData.append('reportedByName', reportedByName || currentUser.name)
       photos.forEach(photo => formData.append('photos', photo))
 
-      const res = await fetch('/api/issues', {
-        method: 'POST',
-        body: formData,
-      })
+      const res = await fetch('/api/issues', { method: 'POST', body: formData })
       if (!res.ok) throw new Error('Failed to submit')
-      setTitle(''); setDescription(''); setLocation(''); setUrgency('medium'); setPhotos([])
+
+      setTitle(''); setDescription(''); setEquipment(''); setUrgency('medium'); setPhotos([])
       setReportedVia(''); setReportedByName('')
-      document.getElementById('photo-input').value = ''
+      const photoInput = document.getElementById('photo-input')
+      if (photoInput) photoInput.value = ''
       setSuccess(true)
       onToast('Issue submitted')
       if (onSubmitted) onSubmitted()
@@ -78,9 +85,32 @@ export default function SubmitIssue({ currentUser, onToast, onSubmitted }) {
         </select>
       </div>
 
+      {/* Location: show dropdown if multiple locations available, otherwise show locked label */}
+      {locations && locations.length > 1 ? (
+        <div className="form-group">
+          <label>Location</label>
+          <select value={locationId} onChange={e => setLocationId(e.target.value)}>
+            <option value="">Select location...</option>
+            {locations.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
+          </select>
+        </div>
+      ) : activeLocationName ? (
+        <div className="form-group">
+          <label>Location</label>
+          <div style={{ fontSize: 13, padding: '9px 12px', background: 'var(--bg)', borderRadius: 'var(--radius)', border: '0.5px solid var(--border)', color: 'var(--text-secondary)' }}>
+            {activeLocationName}
+          </div>
+        </div>
+      ) : null}
+
       <div className="form-group">
-        <label>Location / equipment</label>
-        <input type="text" placeholder="e.g. Floor 2, Rack 3" value={location} onChange={e => setLocation(e.target.value)} />
+        <label>Equipment / area (optional)</label>
+        <input
+          type="text"
+          placeholder="e.g. Squat rack #3, Floor 2 bathroom"
+          value={equipment}
+          onChange={e => setEquipment(e.target.value)}
+        />
       </div>
 
       <div className="form-group">
@@ -95,9 +125,9 @@ export default function SubmitIssue({ currentUser, onToast, onSubmitted }) {
                 flex: 1, padding: '8px 4px', borderRadius: 8, cursor: 'pointer', fontSize: 12, fontWeight: 500,
                 textAlign: 'center', whiteSpace: 'nowrap', overflow: 'hidden',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                border: reportedVia === opt ? '1.5px solid var(--orange)' : '1px solid var(--border)',
-                backgroundColor: reportedVia === opt ? 'var(--orange-light)' : 'var(--surface)',
-                color: reportedVia === opt ? 'var(--orange-dark)' : 'var(--text-secondary)',
+                border: reportedVia === opt ? '1.5px solid var(--bl-orange)' : '1px solid var(--border)',
+                backgroundColor: reportedVia === opt ? 'var(--bl-orange-light)' : 'var(--surface)',
+                color: reportedVia === opt ? 'var(--bl-orange-dark)' : 'var(--text-secondary)',
               }}
             >
               {opt}
