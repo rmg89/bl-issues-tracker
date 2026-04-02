@@ -138,6 +138,18 @@ export default function IssueList({ issues, locations, onSelect, isAdmin, initia
 
   function renderCard(issue) {
     const submitter = issue.submittedByName || issue.submittedBy
+    const rawLocationName = issue.locationName || ''
+    const knownLocationNames = (locations || []).map(l => l.name)
+    let gymLocation = '', areaEquipment = ''
+    if (rawLocationName.includes(' — ')) {
+      const parts = rawLocationName.split(' — ')
+      gymLocation = parts[0] || ''
+      areaEquipment = parts[1] || ''
+    } else if (knownLocationNames.includes(rawLocationName)) {
+      gymLocation = rawLocationName
+    } else {
+      areaEquipment = rawLocationName
+    }
     return (
       <div
         key={issue.id}
@@ -152,7 +164,7 @@ export default function IssueList({ issues, locations, onSelect, isAdmin, initia
                 {issue.urgency}
               </span>
               {submitter && <><span className={styles.dot}>·</span><span>By {submitter}</span></>}
-              {issue.location && <><span className={styles.dot}>·</span><span>{issue.location}</span></>}
+              {areaEquipment && <><span className={styles.dot}>·</span><span>{areaEquipment}</span></>}
               <span className={styles.metaBreak} />
               <span className={styles.metaDot}>·</span>
               <span className={styles.metaDate}>{fmtDateTime(issue.createdAt)}</span>
@@ -160,7 +172,7 @@ export default function IssueList({ issues, locations, onSelect, isAdmin, initia
           </div>
           <div className={styles.statusCol}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-              <LocationPill name={issue.locationName} />
+              <LocationPill name={gymLocation} />
               <span className={`status-badge s-${issue.status}`}>{STATUS_LABEL[issue.status]}</span>
             </div>
             {issue.status === 'solved' ? (

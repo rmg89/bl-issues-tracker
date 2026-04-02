@@ -60,9 +60,13 @@ export default function MyIssues({ issues }) {
             </div>
             <div className={styles.meta}>
               <span className={styles.date}>Submitted {fmtDate(issue.createdAt)}</span>
-              {issue.location && (
-                <><span className={styles.dot}> · </span><span className={styles.location}>{issue.location}</span></>
-              )}
+              {(() => {
+                const rawLN = issue.locationName || ''
+                const gym = rawLN.includes(' — ') ? rawLN.split(' — ')[0] : rawLN
+                const area = rawLN.includes(' — ') ? rawLN.split(' — ')[1] : ''
+                const display = [gym, area].filter(Boolean).join(' · ')
+                return display ? <><span className={styles.dot}> · </span><span className={styles.location}>{display}</span></> : null
+              })()}
             </div>
             {context && (
               <div className={styles.context}>{context}</div>

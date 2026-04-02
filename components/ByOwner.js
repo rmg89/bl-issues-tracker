@@ -60,7 +60,10 @@ export default function ByOwner({ issues, users, onSelect }) {
     return <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-secondary)', fontSize: 14 }}>No active issues.</div>
   }
 
-  const renderCard = (issue) => (
+  const renderCard = (issue) => {
+    const rawLN = issue.locationName || ''
+    const area = rawLN.includes(' — ') ? rawLN.split(' — ')[1] : (!['Nolita','South Orange'].includes(rawLN) ? rawLN : '')
+    return (
     <div key={issue.id} className={styles.card} onClick={() => onSelect(issue.id)}>
       <div className={styles.cardLeft}>
         <div className={styles.title}>{issue.title}</div>
@@ -68,7 +71,7 @@ export default function ByOwner({ issues, users, onSelect }) {
           <span className={`${styles.urgencyTag} ${styles['u_' + (issue.urgency || 'medium')]}`}>
             {issue.urgency || 'medium'}
           </span>
-          {issue.location && <><span className={styles.dot}>·</span><span>{issue.location}</span></>}
+          {area && <><span className={styles.dot}>·</span><span>{area}</span></>}
           <span className={styles.metaBreak} />
           <span className={styles.dot}>·</span>
           <span>{fmtDateTime(issue.createdAt)}</span>
@@ -83,7 +86,8 @@ export default function ByOwner({ issues, users, onSelect }) {
         }
       </div>
     </div>
-  )
+    )
+  }
 
   return (
     <div>

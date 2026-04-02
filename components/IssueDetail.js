@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import styles from './IssueDetail.module.css'
 
 const LOCATION_COLORS = [
@@ -32,11 +32,22 @@ function LocationPill({ name }) {
 
 function MultiSelectUsers({ value, onChange, users }) {
   const [open, setOpen] = useState(false)
+  const ref = useRef(null)
+
+  useEffect(() => {
+    if (!open) return
+    function handleClick(e) {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [open])
+
   function toggle(username) {
     onChange(value.includes(username) ? value.filter(u => u !== username) : [...value, username])
   }
   return (
-    <div style={{ position: 'relative' }}>
+    <div ref={ref} style={{ position: 'relative' }}>
       <div onClick={() => setOpen(o => !o)} style={{
         display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 5, minHeight: 38,
         padding: '5px 10px', border: '0.5px solid var(--border-strong)',
@@ -150,10 +161,20 @@ export default function IssueDetail({ issue, users, currentUser, locations, perm
   function getLogEntry(s) { return statusLog.find(l => l.status === s) }
 
   async function advanceStatus(s) {
-    const newLog = statusLog.filter(l => l.status !== s)
-    newLog.push({ status: s, ts: new Date().toISOString(), by: currentUser.name })
+    const si_target = STEPS.indexOf(s)
+    const si_current = STEPS.indexOf(issue.status)
+    // Only allow advancing forward, not going back via track clicks
+    if (si_target <= si_current) return
+    const newLog = [...statusLog]
+    // Fill in any skipped steps
+    for (let i = si_current + 1; i <= si_target; i++) {
+      const step = STEPS[i]
+      if (!newLog.find(l => l.status === step)) {
+        newLog.push({ status: step, ts: new Date().toISOString(), by: currentUser.name })
+      }
+    }
     await patch({ status: s, statusLog: newLog })
-    onToast('Status updated')
+    onToast(`Marked as ${STEP_LABELS[STEPS.indexOf(s)]}`)
   }
 
   function coreFields() {
@@ -186,10 +207,7 @@ export default function IssueDetail({ issue, users, currentUser, locations, perm
   }
 
   async function markStatus(status) {
-    const newLog = statusLog.filter(l => l.status !== status)
-    newLog.push({ status, ts: new Date().toISOString(), by: currentUser.name })
-    await patch({ ...coreFields(), status, statusLog: newLog })
-    onToast(`Marked as ${STEP_LABELS[STEPS.indexOf(status)]}`)
+    await advanceStatus(status)
   }
 
   async function saveInvestigating(val) {
@@ -201,20 +219,10 @@ export default function IssueDetail({ issue, users, currentUser, locations, perm
 
   async function saveManager(val) {
     setManager(val)
-    const u = users.find(u => u.username === val)
-    await patch({ manager: val, managerName: u?.name || '' })
-    onToast('Saved')
   }
 
   async function saveAssignedTo(val) {
     setAssignedTo(val)
-    await patch({
-      assignedTo: val,
-      assignedBy: currentUser.name,
-      assignedAt: new Date().toISOString(),
-      assignedEmail: val.map(u => users.find(x => x.username === u)?.email || '').filter(Boolean).join(','),
-    })
-    onToast('Saved')
   }
 
   async function addNote() {
@@ -225,12 +233,90 @@ export default function IssueDetail({ issue, users, currentUser, locations, perm
     onToast('Note added')
   }
 
+  const [assignError, setAssignError] = useState('')
+  const [assigning, setAssigning] = useState(false)
+
+  async function assignAndNotify() {
+    if (!manager) { setAssignError('Please select a manager responsible.'); return }
+    if (assignedTo.length === 0) { setAssignError('Please assign at least one staff member.'); return }
+    setAssignError('')
+    setAssigning(true)
+    try {
+      const managerUser = users.find(u => u.username === manager)
+      const assignedEmails = [
+        managerUser?.email,
+        ...assignedTo.map(u => users.find(x => x.username === u)?.email)
+      ].filter(Boolean)
+
+      const newLog = [...statusLog]
+      if (!newLog.find(l => l.status === 'assigned')) {
+        newLog.push({ status: 'assigned', ts: new Date().toISOString(), by: currentUser.name })
+      }
+
+      await patch({
+        status: 'assigned',
+        statusLog: newLog,
+        manager,
+        managerName: managerUser?.name || '',
+        assignedTo,
+        assignedBy: currentUser.name,
+        assignedAt: new Date().toISOString(),
+        assignedEmail: assignedEmails.join(','),
+      })
+
+      // Send notifications
+      await fetch('/api/issues/notify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          issueId: issue.id,
+          issueTitle: issue.title,
+          issueDescription: issue.description,
+          locationName: issue.locationName,
+          urgency: issue.urgency,
+          assignedBy: currentUser.name,
+          emails: assignedEmails,
+          assignedNames: [
+            managerUser?.name,
+            ...assignedTo.map(u => users.find(x => x.username === u)?.name)
+          ].filter(Boolean),
+        }),
+      })
+
+      onToast('Assigned & notifications sent')
+    } catch {
+      onToast('Assigned but notifications failed')
+    }
+    setAssigning(false)
+  }
+
   async function archiveIssue() {
     const newLog = statusLog.filter(l => l.status !== 'archived')
     newLog.push({ status: 'archived', ts: new Date().toISOString(), by: currentUser.name })
     await patch({ status: 'archived', statusLog: newLog })
     onToast('Archived')
     onBack()
+  }
+
+  const knownLocationNames = (locations || []).map(l => l.name)
+  const rawLocationName = issue.locationName || ''
+  let gymLocation = '', areaEquipment = ''
+  if (rawLocationName.includes(' — ')) {
+    const parts = rawLocationName.split(' — ')
+    gymLocation = parts[0] || ''
+    areaEquipment = parts[1] || ''
+  } else if (knownLocationNames.includes(rawLocationName)) {
+    gymLocation = rawLocationName
+  } else {
+    areaEquipment = rawLocationName
+  }
+
+  async function saveLocation(newLocationId) {
+    const loc = (locations || []).find(l => l.id === newLocationId)
+    if (!loc) return
+    const newLocationName = areaEquipment ? `${loc.name} — ${areaEquipment}` : loc.name
+    await patch({ locationId: newLocationId, locationName: newLocationName })
+    onToast('Location updated')
   }
 
   return (
@@ -244,8 +330,27 @@ export default function IssueDetail({ issue, users, currentUser, locations, perm
         </div>
         {issue.description && <p className={styles.desc}>{issue.description}</p>}
         <div className={styles.chips}>
-          <LocationPill name={issue.locationName} />
-          <span className={styles.chip}>By {issue.submittedByName || issue.submittedBy}{issue.location ? ` · ${issue.location}` : ''} · {fmtDate(issue.createdAt)} at {fmtTime(issue.createdAt)}</span>
+          <span className={styles.chip}>By {issue.submittedByName || issue.submittedBy}{areaEquipment ? ` · ${areaEquipment}` : ''} · {fmtDate(issue.createdAt)} at {fmtTime(issue.createdAt)}</span>
+          {locations && locations.length > 0 && (
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              <LocationPill name={gymLocation} />
+              <span className={styles.changeUrgency}>
+                change
+                <select value={issue.locationId || ''} onChange={e => saveLocation(e.target.value)}
+                  style={{ position: 'absolute', opacity: 0, width: '140px', height: '100%', top: 0, left: 0, cursor: 'pointer' }}>
+                  <option value="">No location</option>
+                  {locations.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
+                </select>
+              </span>
+            </span>
+          )}
+        </div>
+        <div className={styles.chips} style={{ marginTop: 6 }}>
+          {issue.reportedVia && (
+            <span className={styles.chip}>
+              Reported by {issue.reportedVia}{issue.reportedByName ? `: ${issue.reportedByName}` : ''}
+            </span>
+          )}
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
             <span className={`${styles.urgencyTag} ${styles['u_' + urgency]}`}>{urgency} urgency</span>
             <span className={styles.changeUrgency}>
@@ -259,13 +364,6 @@ export default function IssueDetail({ issue, users, currentUser, locations, perm
             </span>
           </span>
         </div>
-        {issue.reportedVia && (
-          <div style={{ marginTop: 6 }}>
-            <span className={styles.chip}>
-              Reported by {issue.reportedVia}{issue.reportedByName ? `: ${issue.reportedByName}` : ''}
-            </span>
-          </div>
-        )}
 
         {/* ── Photos ── */}
         {issue.photos?.length > 0 && (
@@ -298,116 +396,132 @@ export default function IssueDetail({ issue, users, currentUser, locations, perm
           })}
         </div>
 
-        {divider}
-
-        {/* ── 1. Who's looking into this ── */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 4 }}>
-          <div className="section-label" style={{ marginTop: 0, marginBottom: 0, whiteSpace: 'nowrap' }}>Who&apos;s looking into this?</div>
-          <select value={investigating} onChange={e => saveInvestigating(e.target.value)} style={{ marginBottom: 0, width: 'auto', minWidth: 140, maxWidth: 200 }}>
-            <option value="">Unassigned</option>
-            {managerUsers.map(u => <option key={u.id} value={u.username}>{u.name}</option>)}
-          </select>
-        </div>
-        {issue.investigatingBy && (
-          <div className={styles.fieldMeta} style={{ marginBottom: 12 }}>Set by {issue.investigatingBy} · {fmtDateTime(issue.investigatingAt)}</div>
-        )}
-
-        {/* ── 2. Identify the real issue ── */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 6 }}>
-          <div className="section-label" style={{ marginTop: 0, marginBottom: 0 }}>Identify the real issue</div>
-          <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-            <button onClick={async () => { await patch({ realIssue, realIssueBy: currentUser.name, realIssueAt: new Date().toISOString() }); onToast('Real issue saved') }}>Save</button>
-            {issue.status === 'submitted' && (
-              <button
-                className="btn-primary"
-                onClick={() => markStatus('identified')}
-                disabled={!realIssue.trim()}
-                title={!realIssue.trim() ? 'Fill in the real issue first' : ''}
-              >Mark identified →</button>
-            )}
+        {/* ══ PHASE 1: IDENTIFY ══ */}
+        <div className={styles.phaseBlock}>
+          <div className={styles.phaseHeader}>
+            <span className={styles.phaseNumber}>1</span>
+            <span className={styles.phaseTitle}>Identify</span>
           </div>
-        </div>
-        <textarea
-          placeholder="What is the actual root issue beneath the surface problem?"
-          value={realIssue}
-          onChange={e => setRealIssue(e.target.value)}
-          style={{ marginBottom: 4 }}
-        />
-        {issue.realIssueBy && (
-          <div className={styles.fieldMeta}>{`Last edited by ${issue.realIssueBy} · ${fmtDateTime(issue.realIssueAt)}`}</div>
-        )}
 
-        {divider}
-
-        {/* ── 3. Discuss ── */}
-        <div className="section-label" style={{ marginTop: 0 }}>Discuss</div>
-        <div className={styles.notes}>
-          {issue.notes.length ? issue.notes.map((n, i) => (
-            <div key={i} className={styles.note}>
-              <div className={styles.noteText}>{n.text}</div>
-              <div className={styles.noteMeta}>{n.authorName} · {fmtDateTime(n.ts)}</div>
-            </div>
-          )) : <div className={styles.noNotes}>No notes yet.</div>}
-        </div>
-        <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-          <textarea placeholder="Add a note or discussion point..." value={newNote}
-            onChange={e => setNewNote(e.target.value)} style={{ flex: 1, minHeight: 64, marginBottom: 0 }} />
-          <button onClick={addNote} style={{ alignSelf: 'flex-end', flexShrink: 0 }}>Add</button>
-        </div>
-
-        {divider}
-
-        {/* ── 4. Solution ── */}
-        <div className="section-label" style={{ marginTop: 0 }}>Solution</div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <textarea
-            placeholder="What is the fix? Who is actioning it and by when?"
-            value={solution}
-            onChange={e => setSolution(e.target.value)}
-            style={{ flex: 1, minHeight: 80, marginBottom: 0 }}
-          />
-          <button onClick={async () => { await patch({ solution, solutionBy: currentUser.name, solutionAt: new Date().toISOString() }); onToast('Solution saved') }}
-            style={{ alignSelf: 'flex-end', flexShrink: 0 }}>Save</button>
-        </div>
-        {issue.solutionBy && (
-          <div className={styles.fieldMeta} style={{ marginTop: 4 }}>Last edited by {issue.solutionBy} · {fmtDateTime(issue.solutionAt)}</div>
-        )}
-
-        {divider}
-
-        {/* ── 5. Assign ── */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 6 }}>
-          <div className="section-label" style={{ marginTop: 0, marginBottom: 0 }}>Assign</div>
-          <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-            {!isSolvedOrArchived && (
-              <button
-                className="btn-primary"
-                onClick={() => markStatus('assigned')}
-                disabled={assignedTo.length === 0}
-                title={assignedTo.length === 0 ? 'Assign someone first' : ''}
-              >Mark assigned →</button>
-            )}
-            {issue.status === 'solved' && (
-              <button onClick={archiveIssue}>Archive →</button>
-            )}
-          </div>
-        </div>
-        <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-          <div style={{ flex: 1, minWidth: 160 }}>
-            <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginBottom: 4 }}>Manager responsible</div>
-            <select value={manager} onChange={e => saveManager(e.target.value)} style={{ marginBottom: 0 }}>
+          {/* Who's looking into this */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+            <div className="section-label" style={{ marginTop: 0, marginBottom: 0, whiteSpace: 'nowrap' }}>Who&apos;s looking into this?</div>
+            <select value={investigating} onChange={e => saveInvestigating(e.target.value)} style={{ marginBottom: 0, width: 'auto', minWidth: 140, maxWidth: 200 }}>
               <option value="">Unassigned</option>
               {managerUsers.map(u => <option key={u.id} value={u.username}>{u.name}</option>)}
             </select>
+            {issue.investigatingBy && (
+              <span className={styles.fieldMeta} style={{ marginBottom: 0 }}>Set by {issue.investigatingBy} · {fmtDateTime(issue.investigatingAt)}</span>
+            )}
           </div>
-          <div style={{ flex: 2, minWidth: 180 }}>
-            <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginBottom: 4 }}>Assigned to (staff)</div>
-            <MultiSelectUsers value={assignedTo} onChange={saveAssignedTo} users={users} />
+
+          {/* Real issue */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 6 }}>
+            <div className="section-label" style={{ marginTop: 0, marginBottom: 0 }}>What&apos;s the actual problem?</div>
+            <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+              <button onClick={async () => { await patch({ realIssue, realIssueBy: currentUser.name, realIssueAt: new Date().toISOString() }); onToast('Saved') }}>Save</button>
+              {issue.status === 'submitted' && (
+                <button
+                  className="btn-primary"
+                  onClick={() => markStatus('identified')}
+                  disabled={!realIssue.trim()}
+                  title={!realIssue.trim() ? 'Fill in the real issue first' : ''}
+                >Mark identified →</button>
+              )}
+            </div>
           </div>
+          <textarea
+            placeholder="What is the actual root issue beneath the surface problem?"
+            value={realIssue}
+            onChange={e => setRealIssue(e.target.value)}
+            style={{ marginBottom: 4 }}
+          />
+          {issue.realIssueBy && (
+            <div className={styles.fieldMeta}>{`Last edited by ${issue.realIssueBy} · ${fmtDateTime(issue.realIssueAt)}`}</div>
+          )}
         </div>
-        {issue.assignedAt && (
-          <div className={styles.fieldMeta} style={{ marginTop: 6 }}>Last updated by {issue.assignedBy} · {fmtDateTime(issue.assignedAt)}</div>
-        )}
+
+        {/* ══ PHASE 2: DISCUSS · DEFINE · ASSIGN ══ */}
+        <div className={styles.phaseBlock}>
+          <div className={styles.phaseHeader}>
+            <span className={styles.phaseNumber}>2</span>
+            <span className={styles.phaseTitle}>Discuss · Define · Assign</span>
+          </div>
+
+          {/* Discuss */}
+          <div className="section-label" style={{ marginTop: 0 }}>Discuss</div>
+          <div className={styles.notes}>
+            {issue.notes.length ? issue.notes.map((n, i) => (
+              <div key={i} className={styles.note}>
+                <div className={styles.noteText}>{n.text}</div>
+                <div className={styles.noteMeta}>{n.authorName} · {fmtDateTime(n.ts)}</div>
+              </div>
+            )) : <div className={styles.noNotes}>No notes yet.</div>}
+          </div>
+          <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+            <textarea placeholder="Add a note or discussion point..." value={newNote}
+              onChange={e => setNewNote(e.target.value)} style={{ flex: 1, minHeight: 64, marginBottom: 0 }} />
+            <button onClick={addNote} style={{ alignSelf: 'flex-end', flexShrink: 0 }}>Add</button>
+          </div>
+
+          <div style={{ borderTop: '0.5px solid var(--border)', margin: '1rem 0' }} />
+
+          {/* Define */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 6 }}>
+            <div className="section-label" style={{ marginTop: 0, marginBottom: 0 }}>Define the fix</div>
+            <button onClick={async () => { await patch({ solution, solutionBy: currentUser.name, solutionAt: new Date().toISOString() }); onToast('Saved') }}
+              style={{ flexShrink: 0 }}>Save</button>
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <textarea
+              placeholder="What specifically are we doing, and by when?"
+              value={solution}
+              onChange={e => setSolution(e.target.value)}
+              style={{ flex: 1, minHeight: 80, marginBottom: 0 }}
+            />
+          </div>
+          {issue.solutionBy && (
+            <div className={styles.fieldMeta} style={{ marginTop: 4 }}>Last edited by {issue.solutionBy} · {fmtDateTime(issue.solutionAt)}</div>
+          )}
+
+          <div style={{ borderTop: '0.5px solid var(--border)', margin: '1rem 0' }} />
+
+          {/* Assign */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 6 }}>
+            <div className="section-label" style={{ marginTop: 0, marginBottom: 0 }}>Assign</div>
+            <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+              {!isSolvedOrArchived && (
+                <button
+                  className="btn-primary"
+                  onClick={assignAndNotify}
+                  disabled={assigning}
+                >{assigning ? 'Assigning...' : 'Assign & notify →'}</button>
+              )}
+              {issue.status === 'solved' && (
+                <button onClick={archiveIssue}>Archive →</button>
+              )}
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+            <div style={{ flex: 1, minWidth: 160 }}>
+              <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginBottom: 4 }}>Manager responsible</div>
+              <select value={manager} onChange={e => saveManager(e.target.value)} style={{ marginBottom: 0 }}>
+                <option value="">Select manager…</option>
+                {managerUsers.map(u => <option key={u.id} value={u.username}>{u.name}</option>)}
+              </select>
+            </div>
+            <div style={{ flex: 2, minWidth: 180 }}>
+              <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginBottom: 4 }}>Assigned to (staff)</div>
+              <MultiSelectUsers value={assignedTo} onChange={saveAssignedTo} users={users} />
+            </div>
+          </div>
+          {assignError && (
+            <div style={{ color: '#C62828', fontSize: 13, marginTop: 8 }}>{assignError}</div>
+          )}
+          {issue.assignedAt && (
+            <div className={styles.fieldMeta} style={{ marginTop: 6 }}>Last assigned by {issue.assignedBy} · {fmtDateTime(issue.assignedAt)}</div>
+          )}
+        </div>
 
       </div>
 

@@ -176,7 +176,7 @@ export default function Dashboard({ issues, currentUser, activeLocation, onNavig
                 </div>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0 }}>
-                <LocationPill name={issue.locationName || issue.location} />
+                <LocationPill name={issue.locationName?.includes(' — ') ? issue.locationName.split(' — ')[0] : (issue.locationName || '')} />
                 <span className={`status-badge s-${issue.status}`}>{STATUS_LABEL[issue.status]}</span>
               </div>
             </div>
