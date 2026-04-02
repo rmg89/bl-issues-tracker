@@ -1,0 +1,83 @@
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 12px;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  background: var(--surface);
+  border: 0.5px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+}
+
+.locName {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 2px;
+}
+
+.locSlug {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--text-tertiary);
+  margin-left: 6px;
+}
+
+.locAddress {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.rowActions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+  align-self: center;
+}
+
+.editRow {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.saveBtn {
+  font-size: 12px;
+  padding: 5px 12px;
+  border: 0.5px solid var(--bl-orange-dark);
+  border-radius: var(--radius);
+  background: var(--bl-orange);
+  color: white;
+  cursor: pointer;
+}
+.saveBtn:hover { background: var(--bl-orange-dark); }
+
+@media (max-width: 600px) {
+  .grid { grid-template-columns: 1fr; }
+  .row { flex-direction: column; gap: 8px; }
+  .rowActions {
+    align-self: stretch;
+    border-top: 0.5px solid var(--border);
+    padding-top: 8px;
+  }
+  .rowActions button { flex: 1; }
+}
