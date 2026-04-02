@@ -106,7 +106,6 @@ export default function Home() {
   async function handleLocationChange(locId) {
     setActiveLocationId(locId)
     setSelectedIssueId(null)
-    setTab('home')
     await loadData(locId)
   }
 
@@ -151,7 +150,7 @@ export default function Home() {
                 onChange={e => handleLocationChange(e.target.value)}
               >
                 {isGlobalAdmin && (
-                  <option value="all">All locations</option>
+                  <option value="all">ALL LOCATIONS</option>
                 )}
                 {accessibleLocations.map(l => (
                   <option key={l.id} value={l.id}>{l.name}</option>

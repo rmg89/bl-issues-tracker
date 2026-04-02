@@ -129,6 +129,7 @@ label {
 }
 .s-submitted { background: #F1EFE8; color: #5F5E5A; }
 .s-identified { background: #FFF3E0; color: #E65100; }
+.s-assigned { background: #E8EDF5; color: #2C4F8A; }
 .s-discussing { background: #E3F2FD; color: #1565C0; }
 .s-solved { background: #E8F5E9; color: #2E7D32; }
 .s-archived { background: #F1EFE8; color: #A0A09C; }

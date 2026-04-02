@@ -10,7 +10,7 @@
   "dependencies": {
     "airtable": "^0.12.2",
     "formidable": "^3.5.1",
-    "next": "^16.2.0",
+    "next": "^15.2.0",
     "react": "^18",
     "react-dom": "^18"
   }

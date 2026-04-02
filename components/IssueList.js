@@ -2,18 +2,20 @@ import { useState, useMemo } from 'react'
 import styles from './IssueList.module.css'
 
 const LOCATION_COLORS = [
-  { bg: '#E8EDF5', color: '#3D5A8A', border: '#C5D0E6' },
-  { bg: '#EAF2EA', color: '#2E6B3E', border: '#C0DBC5' },
-  { bg: '#F5ECE8', color: '#8A4A2F', border: '#E6CFC5' },
-  { bg: '#F5F0E8', color: '#7A5C1E', border: '#E6D9C0' },
-  { bg: '#E8F2F2', color: '#2A6B6B', border: '#C0DBDB' },
-  { bg: '#F0EAF5', color: '#5A3D8A', border: '#D5C5E6' },
+  { bg: '#E8EDF5', color: '#2C4F8A', border: '#B8C8E8' }, // blue
+  { bg: '#EDE8F5', color: '#5A3D8A', border: '#C8B8E8' }, // purple
+  { bg: '#E8F2F5', color: '#1E6B7A', border: '#B8D8E0' }, // teal
+  { bg: '#F5E8F0', color: '#8A2C6B', border: '#E8B8D8' }, // rose
+  { bg: '#E8EEF5', color: '#2C5F7A', border: '#B8D0E8' }, // slate blue
+  { bg: '#F0E8F5', color: '#6B2C8A', border: '#D8B8E8' }, // violet
+  { bg: '#E8F5F2', color: '#1E7A6B', border: '#B8E0D8' }, // cyan
+  { bg: '#F5EBE8', color: '#8A4A2C', border: '#E8C8B8' }, // sienna
 ]
 function getLocationColor(name) {
   if (!name) return LOCATION_COLORS[0]
-  let hash = 0
-  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash)
-  return LOCATION_COLORS[Math.abs(hash) % LOCATION_COLORS.length]
+  let h = 5381
+  for (let i = 0; i < name.length; i++) h = ((h << 5) + h) ^ name.charCodeAt(i)
+  return LOCATION_COLORS[Math.abs(h) % LOCATION_COLORS.length]
 }
 function LocationPill({ name }) {
   if (!name) return null
