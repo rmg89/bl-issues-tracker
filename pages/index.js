@@ -173,23 +173,32 @@ export default function Home() {
         <div className={styles.tabsInner}>
           {isManagerHere ? (
             <>
-              <button className={`${styles.tab} ${tab === 'home' ? styles.tabActive : ''}`} onClick={() => switchTab('home')}>
-                <span className={styles.tabLabelFull}>Home</span>
-                <span className={styles.tabLabelShort}>Home</span>
-              </button>
-              <button className={`${styles.tab} ${tab === 'submit' ? styles.tabActive : ''}`} onClick={() => switchTab('submit')}>
-                <span className={styles.tabLabelFull}>Submit issue</span>
-                <span className={styles.tabLabelShort}>Submit</span>
-              </button>
-              <button className={`${styles.tab} ${tab === 'issues' ? styles.tabActive : ''}`} onClick={() => switchTab('issues')}>
-                <span className={styles.tabLabelFull}>All issues</span>
-                <span className={styles.tabLabelShort}>Issues</span>
-                {activeCount > 0 && <span className={styles.count}>{activeCount}</span>}
-              </button>
-              <button className={`${styles.tab} ${tab === 'settings' ? styles.tabActive : ''}`} onClick={() => switchTab('settings')}>
-                <span className={styles.tabLabelFull}>Settings</span>
-                <span className={styles.tabLabelShort}>⚙</span>
-              </button>
+              <div className={styles.tabCol}>
+                <button className={`${styles.tab} ${tab === 'home' ? styles.tabActive : ''}`} onClick={() => switchTab('home')}>
+                  <span className={styles.tabLabelFull}>Dashboard</span>
+                  <span className={styles.tabLabelShort}>Home</span>
+                </button>
+              </div>
+              <div className={styles.tabCol}>
+                <button className={`${styles.tab} ${tab === 'submit' ? styles.tabActive : ''}`} onClick={() => switchTab('submit')}>
+                  <span className={styles.tabLabelFull}>Submit issue</span>
+                  <span className={styles.tabLabelShort}>Submit</span>
+                </button>
+              </div>
+              <div className={styles.tabCenter}>
+                <button className={`${styles.tab} ${tab === 'issues' ? styles.tabActive : ''}`} onClick={() => switchTab('issues')}>
+                  <span className={styles.tabLabelFull}>All issues</span>
+                  <span className={styles.tabLabelShort}>Issues</span>
+                  {activeCount > 0 && <span className={styles.count}>{activeCount}</span>}
+                </button>
+              </div>
+              <div className={styles.tabCol} />
+              <div className={styles.tabRight}>
+                <button className={`${styles.tabSettings} ${tab === 'settings' ? styles.tabSettingsActive : ''}`} onClick={() => switchTab('settings')}>
+                  <span className={styles.tabLabelFull}>⚙ Settings</span>
+                  <span className={styles.tabLabelShort}>⚙</span>
+                </button>
+              </div>
             </>
           ) : (
             <>

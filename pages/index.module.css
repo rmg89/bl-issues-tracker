@@ -75,12 +75,29 @@
 }
 
 .tabsInner {
-  display: flex;
-  gap: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr auto 1fr 1fr;
+  align-items: stretch;
   max-width: 720px;
   margin: 0 auto;
-  padding: 0 8px;
+  padding: 0;
+}
+
+.tabLeft {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.tabCenter {
+  display: flex;
   justify-content: center;
+}
+
+.tabRight {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  padding-right: 4px;
 }
 
 .tab {
@@ -230,4 +247,53 @@
     font-size: 12px;
     padding: 4px 8px;
   }
+}
+
+.tabSettings {
+  padding: 14px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-tertiary);
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  margin-bottom: -1px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: color 0.15s;
+  white-space: nowrap;
+  letter-spacing: 0.01em;
+}
+.tabSettings:hover { color: var(--text-secondary); background: none; }
+.tabSettingsActive {
+  color: var(--bl-orange) !important;
+  border-bottom-color: var(--bl-orange);
+}
+
+@media (max-width: 600px) {
+  .tabsInner {
+    display: flex;
+    grid-template-columns: none;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .tabsInner::-webkit-scrollbar { display: none; }
+  .tabLeft, .tabCenter, .tabRight {
+    display: contents;
+  }
+  .tabSettings {
+    padding: 10px 14px;
+    font-size: 12px;
+    flex-shrink: 0;
+    margin-left: auto;
+  }
+}
+
+.tabCol {
+  display: flex;
+  justify-content: center;
 }

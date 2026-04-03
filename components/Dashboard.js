@@ -56,10 +56,14 @@ function getLastAction(issue) {
   }
 
   if (issue.assignedAt && issue.assignedBy) {
-    const names = Array.isArray(issue.assignedTo)
+    const assignedNames = Array.isArray(issue.assignedTo)
       ? issue.assignedTo.join(', ')
       : String(issue.assignedTo || '')
-    events.push({ ts: issue.assignedAt, by: issue.assignedBy, what: `Assigned to ${names}` })
+    const manager = issue.managerName || issue.manager
+    const what = manager
+      ? `Manager: ${manager}${assignedNames ? ' · Assigned to: ' + assignedNames : ''}`
+      : assignedNames ? `Assigned to: ${assignedNames}` : 'Assigned'
+    events.push({ ts: issue.assignedAt, by: issue.assignedBy, what })
   }
 
   if (issue.realIssueAt && issue.realIssueBy) {
