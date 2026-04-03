@@ -43,12 +43,14 @@ function sortIssues(issues) {
 export default function ByOwner({ issues, users, onSelect }) {
   const active = (issues || []).filter(i => i.status !== 'archived')
 
-  const unassigned = sortIssues(active.filter(i => (!i.assignedTo || !i.assignedTo.trim()) && i.status !== 'solved'))
-  const solvedUnassigned = active.filter(i => (!i.assignedTo || !i.assignedTo.trim()) && i.status === 'solved')
+  const isUnassigned = (i) => !i.assignedTo || (Array.isArray(i.assignedTo) ? i.assignedTo.length === 0 : !String(i.assignedTo).trim())
+
+  const unassigned = sortIssues(active.filter(i => isUnassigned(i) && i.status !== 'solved'))
+  const solvedUnassigned = active.filter(i => isUnassigned(i) && i.status === 'solved')
   const userGroups = (users || []).map(u => ({
     label: u.name,
     username: u.username,
-    issues: sortIssues(active.filter(i => i.assignedTo === u.username)),
+    issues: sortIssues(active.filter(i => Array.isArray(i.assignedTo) ? i.assignedTo.includes(u.username) : i.assignedTo === u.username)),
   })).filter(g => g.issues.length > 0)
 
   const allGroups = [

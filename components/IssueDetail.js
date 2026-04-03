@@ -194,16 +194,37 @@ export default function IssueDetail({ issue, users, currentUser, locations, perm
     onToast(`Marked as ${STEP_LABELS[STEPS.indexOf(s)]}`)
   }
 
+  async function doRewind(s) {
+    // Strip log entries for steps after the target
+    const si_target = STEPS.indexOf(s)
+    const newLog = statusLog.filter(l => STEPS.indexOf(l.status) <= si_target)
+    await patch({ status: s, statusLog: newLog })
+    onToast(`Moved back to ${STEP_LABELS[si_target]}`)
+  }
+
+  function clearConfirms() {
+    setConfirmSolveTrack(false)
+    setConfirmArchive(false)
+    setConfirmReopen(null)
+  }
+
   async function advanceStatus(s) {
     const si_target = STEPS.indexOf(s)
     const si_current = STEPS.indexOf(issue.status)
 
-    // Clicking backwards — only reopen from archived, block everything else
+    // Clicking backwards
     if (si_target < si_current) {
-      if (issue.status === 'archived') setConfirmReopen(s)
+      if (issue.status === 'archived') {
+        // Reopen from archived requires confirm
+        clearConfirms()
+        setConfirmReopen(s)
+        return
+      }
+      // Allow going back to any step freely
+      await doRewind(s)
       return
     }
-    // Same step — no-op
+    // Same step — toggle off if confirm already open, else no-op
     if (si_target === si_current) return
 
     // Identified: requires real issue text, auto-saves it
@@ -231,12 +252,13 @@ export default function IssueDetail({ issue, users, currentUser, locations, perm
     }
     // Solved: double confirm — track uses inline, bar button uses its own state
     if (s === 'solved') {
+      clearConfirms()
       setConfirmSolveTrack(true)
       return
     }
     // Archived: double confirm only if not already solved
     if (s === 'archived') {
-      if (issue.status !== 'solved') { setConfirmArchive(true); return }
+      if (issue.status !== 'solved') { clearConfirms(); setConfirmArchive(true); return }
       await doAdvance(s)
       return
     }
@@ -490,15 +512,15 @@ export default function IssueDetail({ issue, users, currentUser, locations, perm
             const showArchiveNudge = s === 'archived' && readyToArchive && !isConfirmingArchive
             if (isConfirmingSolve) return (
               <div key={s} className={`${styles.step} ${styles.active}`}
-                style={{ flexDirection: 'column', gap: 6, padding: '10px 6px' }}>
+                style={{ flexDirection: 'column', gap: 5, padding: '8px 6px', minHeight: 56 }}>
                 <span style={{ fontSize: 11, fontWeight: 700, opacity: 0.95 }}>All fixed?</span>
-                <div style={{ display: 'flex', gap: 5 }}>
-                  <button onClick={() => { setConfirmSolveTrack(false); doAdvance('solved') }}
-                    style={{ fontSize: 12, padding: '5px 12px', background: '#2E7D32', color: 'white', border: 'none', borderRadius: 5, cursor: 'pointer', fontWeight: 700 }}>
+                <div style={{ display: 'flex', gap: 5, justifyContent: 'center' }}>
+                  <button className={styles.confirmBtn} onClick={() => { setConfirmSolveTrack(false); doAdvance('solved') }}
+                    style={{ background: '#2E7D32', color: 'white', padding: '5px 10px', border: 'none' }}>
                     Yes ✓
                   </button>
-                  <button onClick={() => setConfirmSolveTrack(false)}
-                    style={{ fontSize: 12, padding: '5px 12px', background: 'rgba(255,255,255,0.25)', color: 'white', border: 'none', borderRadius: 5, cursor: 'pointer', fontWeight: 600 }}>
+                  <button className={styles.confirmBtn} onClick={() => setConfirmSolveTrack(false)}
+                    style={{ background: 'rgba(255,255,255,0.25)', color: 'white', padding: '5px 10px', border: 'none' }}>
                     Not yet
                   </button>
                 </div>
@@ -508,13 +530,13 @@ export default function IssueDetail({ issue, users, currentUser, locations, perm
               <div key={s} className={`${styles.step}`}
                 style={{ flexDirection: 'column', gap: 6, padding: '10px 6px', background: '#7A1010', color: 'white', borderRadius: 0 }}>
                 <span style={{ fontSize: 11, fontWeight: 700, lineHeight: 1.3, textAlign: 'center' }}>Archive without solving first?</span>
-                <div style={{ display: 'flex', gap: 5 }}>
+                <div style={{ display: 'flex', gap: 5, justifyContent: 'center' }}>
                   <button onClick={() => { setConfirmArchive(false); doAdvance('archived') }}
-                    style={{ fontSize: 12, padding: '5px 12px', background: '#333', color: 'white', border: 'none', borderRadius: 5, cursor: 'pointer', fontWeight: 700 }}>
+                    style={{ background: '#333', color: 'white', padding: '5px 0', border: 'none', borderRadius: 5, cursor: 'pointer', fontWeight: 700, fontSize: 12, width: 44, textAlign: 'center', display: 'block' }}>
                     Yes
                   </button>
                   <button onClick={() => setConfirmArchive(false)}
-                    style={{ fontSize: 12, padding: '5px 12px', background: 'rgba(255,255,255,0.2)', color: 'white', border: 'none', borderRadius: 5, cursor: 'pointer', fontWeight: 600 }}>
+                    style={{ background: 'rgba(255,255,255,0.2)', color: 'white', padding: '5px 0', border: 'none', borderRadius: 5, cursor: 'pointer', fontWeight: 600, fontSize: 12, width: 44, textAlign: 'center', display: 'block' }}>
                     No
                   </button>
                 </div>
@@ -524,18 +546,17 @@ export default function IssueDetail({ issue, users, currentUser, locations, perm
               <div key={s} className={`${styles.step}`}
                 style={{ flexDirection: 'column', gap: 6, padding: '10px 8px', background: '#1A3A5C', color: 'white', borderRadius: 0 }}>
                 <span style={{ fontSize: 10, fontWeight: 700, lineHeight: 1.3, textAlign: 'center' }}>Reopen this issue?</span>
-                <div style={{ display: 'flex', gap: 6 }}>
-                  <button onClick={async () => {
+                <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
+                  <button className={styles.confirmBtn} onClick={async () => {
+                    const target = confirmReopen
                     setConfirmReopen(null)
-                    const newLog = statusLog.filter(l => STEPS.indexOf(l.status) <= STEPS.indexOf(confirmReopen))
-                    await patch({ status: confirmReopen, statusLog: newLog })
+                    await doRewind(target)
                     onToast('Issue reopened')
-                  }}
-                    style={{ fontSize: 11, padding: '4px 10px', background: '#E85D26', color: 'white', border: 'none', borderRadius: 5, cursor: 'pointer', fontWeight: 600 }}>
+                  }} style={{ background: '#E85D26', color: 'white' }}>
                     Yes, reopen
                   </button>
-                  <button onClick={() => setConfirmReopen(null)}
-                    style={{ fontSize: 11, padding: '4px 10px', background: 'rgba(255,255,255,0.2)', color: 'white', border: 'none', borderRadius: 5, cursor: 'pointer' }}>
+                  <button className={styles.confirmBtn} onClick={() => setConfirmReopen(null)}
+                    style={{ background: 'rgba(255,255,255,0.2)', color: 'white' }}>
                     No
                   </button>
                 </div>

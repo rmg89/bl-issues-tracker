@@ -122,7 +122,10 @@ export default function Dashboard({ issues, currentUser, activeLocation, onNavig
     <div className={styles.wrap}>
       <div className={styles.greeting}>
         Good {new Date().getHours() < 12 ? 'morning' : new Date().getHours() < 17 ? 'afternoon' : 'evening'}, {currentUser.name}.
-        {activeLocation && <span className={styles.locationLabel}>{activeLocation.name}</span>}
+        {activeLocation
+          ? <span className={styles.locationLabel}>{activeLocation.name}</span>
+          : <span className={styles.locationLabel}>All locations</span>
+        }
       </div>
 
       <div className={styles.stats}>
