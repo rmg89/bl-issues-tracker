@@ -2,14 +2,14 @@ import { useState, useMemo } from 'react'
 import styles from './IssueList.module.css'
 
 const LOCATION_COLORS = [
-  { bg: '#E8EDF5', color: '#2C4F8A', border: '#B8C8E8' }, // blue
-  { bg: '#EDE8F5', color: '#5A3D8A', border: '#C8B8E8' }, // purple
-  { bg: '#E8F2F5', color: '#1E6B7A', border: '#B8D8E0' }, // teal
-  { bg: '#F5E8F0', color: '#8A2C6B', border: '#E8B8D8' }, // rose
-  { bg: '#E8EEF5', color: '#2C5F7A', border: '#B8D0E8' }, // slate blue
-  { bg: '#F0E8F5', color: '#6B2C8A', border: '#D8B8E8' }, // violet
-  { bg: '#E8F5F2', color: '#1E7A6B', border: '#B8E0D8' }, // cyan
-  { bg: '#F5EBE8', color: '#8A4A2C', border: '#E8C8B8' }, // sienna
+  { bg: '#E8EDF5', color: '#2C4F8A', border: '#B8C8E8' },
+  { bg: '#EDE8F5', color: '#5A3D8A', border: '#C8B8E8' },
+  { bg: '#E8F2F5', color: '#1E6B7A', border: '#B8D8E0' },
+  { bg: '#F5E8F0', color: '#8A2C6B', border: '#E8B8D8' },
+  { bg: '#E8EEF5', color: '#2C5F7A', border: '#B8D0E8' },
+  { bg: '#F0E8F5', color: '#6B2C8A', border: '#D8B8E8' },
+  { bg: '#E8F5F2', color: '#1E7A6B', border: '#B8E0D8' },
+  { bg: '#F5EBE8', color: '#8A4A2C', border: '#E8C8B8' },
 ]
 function getLocationColor(name) {
   if (!name) return LOCATION_COLORS[0]
@@ -32,16 +32,11 @@ function LocationPill({ name }) {
   )
 }
 
-
 function fmtDateTime(str) {
   if (!str) return ''
   return new Date(str).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
     + ' at '
     + new Date(str).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
-}
-
-function fmtDate(str) {
-  return new Date(str).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
 function daysSince(str) {
@@ -53,6 +48,10 @@ function daysToResolve(createdAt, statusLog) {
   const resolved = (statusLog || []).find(l => l.status === 'solved' || l.status === 'archived')
   if (!resolved) return null
   return Math.max(0, Math.floor((new Date(resolved.ts) - new Date(createdAt)) / (1000 * 60 * 60 * 24)))
+}
+
+function initials(name) {
+  return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
 }
 
 const STATUS_LABEL = {
@@ -85,14 +84,18 @@ function getGroupKey(issue, sortBy) {
   return null
 }
 
-export default function IssueList({ issues, locations, onSelect, isAdmin, initialSort, initialFilter, currentUser }) {
+function sortIssues(issues) {
+  return [...issues].sort((a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status])
+}
+
+export default function IssueList({ issues, locations, onSelect, isAdmin, initialSort, initialFilter, currentUser, users }) {
   const [search, setSearch] = useState('')
   const [sortBy, setSortBy] = useState(initialSort || 'newest')
   const [showArchived, setShowArchived] = useState(false)
+  const [viewMode, setViewMode] = useState('list') // 'list' | 'bymanager'
 
   const archivedCount = issues.filter(i => i.status === 'archived').length
 
-  // Archived-only view — sorted by archived date desc, searchable
   const archivedIssues = useMemo(() => {
     let list = issues.filter(i => i.status === 'archived')
     if (search.trim()) {
@@ -137,6 +140,30 @@ export default function IssueList({ issues, locations, onSelect, isAdmin, initia
     }
     return list
   }, [issues, search, sortBy, showArchived])
+
+  // By manager grouping
+  const managerGroups = useMemo(() => {
+    if (viewMode !== 'bymanager') return null
+    const active = issues.filter(i => i.status !== 'archived')
+    const hasManager = i => i.manager && String(i.manager).trim()
+
+    const notYetIdentified = sortIssues(active.filter(i => !hasManager(i) && i.status === 'submitted'))
+    const needsManager = sortIssues(active.filter(i => !hasManager(i) && i.status !== 'submitted' && i.status !== 'solved'))
+    const solvedNoManager = active.filter(i => !hasManager(i) && i.status === 'solved')
+
+    const groups = (users || []).map(u => ({
+      label: u.name,
+      username: u.username,
+      issues: sortIssues(active.filter(i => i.manager === u.username)),
+    })).filter(g => g.issues.length > 0)
+
+    return {
+      needsManager,
+      notYetIdentified,
+      solvedNoManager,
+      managerGroups: groups,
+    }
+  }, [issues, users, viewMode])
 
   function renderCard(issue) {
     const submitter = issue.submittedByName || issue.submittedBy
@@ -192,6 +219,23 @@ export default function IssueList({ issues, locations, onSelect, isAdmin, initia
     )
   }
 
+  function renderManagerGroup(group, isSpecial, icon) {
+    return (
+      <div key={group.username} className={styles.managerGroup}>
+        <div className={styles.managerGroupHeader}>
+          <div className={styles.managerGroupIdentity}>
+            <div className={`${styles.managerAvatar} ${isSpecial ? styles.managerAvatarGray : ''}`}>
+              {icon || initials(group.label)}
+            </div>
+            <span className={styles.managerGroupName}>{group.label}</span>
+            <span className={styles.managerGroupCount}>{group.issues.length} issue{group.issues.length !== 1 ? 's' : ''}</span>
+          </div>
+        </div>
+        <div className={styles.list}>{group.issues.map(renderCard)}</div>
+      </div>
+    )
+  }
+
   return (
     <div>
       <div className={styles.toolbar}>
@@ -203,27 +247,41 @@ export default function IssueList({ issues, locations, onSelect, isAdmin, initia
           onChange={e => setSearch(e.target.value)}
         />
         {!showArchived && (
-          <select className={styles.sort} value={sortBy} onChange={e => setSortBy(e.target.value)}>
-            <optgroup label="Date">
-              <option value="newest">Newest first</option>
-              <option value="oldest">Oldest first</option>
-            </optgroup>
-            <optgroup label="Urgency">
-              <option value="urgency_high">Highest urgency first</option>
-              <option value="urgency_low">Lowest urgency first</option>
-            </optgroup>
-            <optgroup label="Status">
-              <option value="status_active">Active first</option>
-              <option value="status_resolved">Resolved first</option>
-            </optgroup>
-          </select>
+          <>
+            {viewMode === 'list' && (
+              <select className={styles.sort} value={sortBy} onChange={e => setSortBy(e.target.value)}>
+                <optgroup label="Date">
+                  <option value="newest">Newest first</option>
+                  <option value="oldest">Oldest first</option>
+                </optgroup>
+                <optgroup label="Urgency">
+                  <option value="urgency_high">Highest urgency first</option>
+                  <option value="urgency_low">Lowest urgency first</option>
+                </optgroup>
+                <optgroup label="Status">
+                  <option value="status_active">Active first</option>
+                  <option value="status_resolved">Resolved first</option>
+                </optgroup>
+              </select>
+            )}
+            <div className={styles.viewToggle}>
+              <button
+                className={`${styles.viewToggleBtn} ${viewMode === 'list' ? styles.viewToggleActive : ''}`}
+                onClick={() => setViewMode('list')}
+              >List</button>
+              <button
+                className={`${styles.viewToggleBtn} ${viewMode === 'bymanager' ? styles.viewToggleActive : ''}`}
+                onClick={() => setViewMode('bymanager')}
+              >By manager</button>
+            </div>
+          </>
         )}
         {archivedCount > 0 && (
           <button
             className={`${styles.archiveToggle} ${showArchived ? styles.archiveToggleOn : ''}`}
             onClick={() => { setShowArchived(s => !s); setSearch('') }}
           >
-            {showArchived ? '← Back to issues' : `See archived (${archivedCount})`}
+            {showArchived ? '← Back' : `Archived (${archivedCount})`}
           </button>
         )}
       </div>
@@ -240,10 +298,30 @@ export default function IssueList({ issues, locations, onSelect, isAdmin, initia
             {search ? `No archived issues matching "${search}"` : 'No archived issues.'}
           </div>
         ) : (
-          <div className={styles.list}>
-            {archivedIssues.map(renderCard)}
-          </div>
+          <div className={styles.list}>{archivedIssues.map(renderCard)}</div>
         )
+      ) : viewMode === 'bymanager' ? (
+        <div>
+          {managerGroups.needsManager.length > 0 && renderManagerGroup(
+            { label: 'Unassigned', username: '__unassigned', issues: managerGroups.needsManager }, true, '–'
+          )}
+          {managerGroups.notYetIdentified.length > 0 && renderManagerGroup(
+            { label: 'Not Yet Identified', username: '__not_identified', issues: managerGroups.notYetIdentified }, true, '?'
+          )}
+          {managerGroups.managerGroups.map(g => renderManagerGroup(g, false, null))}
+          {managerGroups.solvedNoManager.length > 0 && (
+            <div style={{ opacity: 0.6 }}>
+              {renderManagerGroup(
+                { label: 'Resolved without manager', username: '__solved', issues: managerGroups.solvedNoManager }, true, '✓'
+              )}
+            </div>
+          )}
+          {managerGroups.needsManager.length === 0 &&
+           managerGroups.notYetIdentified.length === 0 &&
+           managerGroups.managerGroups.length === 0 && (
+            <div className={styles.empty}>No active issues.</div>
+          )}
+        </div>
       ) : (
         !filtered.length ? (
           <div className={styles.empty}>
@@ -260,7 +338,6 @@ export default function IssueList({ issues, locations, onSelect, isAdmin, initia
                 const groupCount = groupKey
                   ? filtered.filter(i => getGroupKey(i, sortBy) === groupKey).length
                   : null
-
                 return (
                   <div key={issue.id}>
                     {showHeader && (

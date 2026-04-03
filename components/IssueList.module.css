@@ -129,8 +129,6 @@
   white-space: nowrap;
 }
 
-
-
 @media (max-width: 600px) {
   .toolbar {
     flex-wrap: wrap;
@@ -236,4 +234,70 @@
   margin-bottom: 4px;
   display: block;
   text-align: right;
+}
+
+.viewToggle {
+  display: flex;
+  border: 0.5px solid var(--border-strong);
+  border-radius: var(--radius);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.viewToggleBtn {
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  background: var(--surface);
+  color: var(--text-secondary);
+  border: none;
+  border-radius: 0;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.viewToggleBtn:hover { background: var(--bg); color: var(--text); }
+.viewToggleActive {
+  background: var(--bg) !important;
+  color: var(--text) !important;
+  font-weight: 600;
+}
+
+.managerGroup { margin-bottom: 1.5rem; }
+
+.managerGroupHeader { margin-bottom: 8px; }
+
+.managerGroupIdentity {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.managerAvatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--bl-orange);
+  color: white;
+  font-size: 11px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.managerAvatarGray {
+  background: var(--border-strong);
+  color: var(--text-secondary);
+}
+
+.managerGroupName {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.managerGroupCount {
+  font-size: 12px;
+  color: var(--text-tertiary);
 }

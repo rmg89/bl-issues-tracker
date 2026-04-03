@@ -7,6 +7,7 @@ import ManageTeam from '../components/ManageTeam'
 import ByOwner from '../components/ByOwner'
 import Dashboard from '../components/Dashboard'
 import ManageLocations from '../components/ManageLocations'
+import Settings from '../components/Settings'
 import MyIssues from '../components/MyIssues'
 import styles from './index.module.css'
 import { getUserAccessibleLocationIds, getPermissionsForLocation } from '../lib/permissions'
@@ -185,20 +186,10 @@ export default function Home() {
                 <span className={styles.tabLabelShort}>Issues</span>
                 {activeCount > 0 && <span className={styles.count}>{activeCount}</span>}
               </button>
-              <button className={`${styles.tab} ${tab === 'owner' ? styles.tabActive : ''}`} onClick={() => switchTab('owner')}>
-                <span className={styles.tabLabelFull}>By manager</span>
-                <span className={styles.tabLabelShort}>By mgr</span>
+              <button className={`${styles.tab} ${tab === 'settings' ? styles.tabActive : ''}`} onClick={() => switchTab('settings')}>
+                <span className={styles.tabLabelFull}>Settings</span>
+                <span className={styles.tabLabelShort}>⚙</span>
               </button>
-              <button className={`${styles.tab} ${tab === 'team' ? styles.tabActive : ''}`} onClick={() => switchTab('team')}>
-                <span className={styles.tabLabelFull}>Manage team</span>
-                <span className={styles.tabLabelShort}>Team</span>
-              </button>
-              {isGlobalAdmin && (
-                <button className={`${styles.tab} ${tab === 'locations' ? styles.tabActive : ''}`} onClick={() => switchTab('locations')}>
-                  <span className={styles.tabLabelFull}>Locations</span>
-                  <span className={styles.tabLabelShort}>Loc.</span>
-                </button>
-              )}
             </>
           ) : (
             <>
@@ -260,6 +251,7 @@ export default function Home() {
                 initialSort={issueListSort}
                 initialFilter={issueListFilter}
                 currentUser={currentUser}
+                users={users}
               />
             )
           )}
@@ -268,38 +260,14 @@ export default function Home() {
             <MyIssues issues={mySubmittedIssues} />
           )}
 
-          {!loading && tab === 'owner' && isManagerHere && (
-            selectedIssue ? (
-              <IssueDetail
-                issue={selectedIssue}
-                users={users}
-                currentUser={currentUser}
-                locations={locations}
-                permissions={perms}
-                onBack={() => setSelectedIssueId(null)}
-                onUpdate={handleIssueUpdate}
-                onToast={showToast}
-              />
-            ) : (
-              <ByOwner issues={issues} users={users} onSelect={setSelectedIssueId} />
-            )
-          )}
-
-          {!loading && tab === 'team' && isManagerHere && (
-            <ManageTeam
+          {!loading && tab === 'settings' && isManagerHere && (
+            <Settings
               users={users}
               locations={locations}
               activeLocationId={activeLocationId}
               currentUser={currentUser}
               isGlobalAdmin={isGlobalAdmin}
               onUsersChange={setUsers}
-              onToast={showToast}
-            />
-          )}
-
-          {!loading && tab === 'locations' && isGlobalAdmin && (
-            <ManageLocations
-              locations={locations}
               onLocationsChange={setLocations}
               onToast={showToast}
             />

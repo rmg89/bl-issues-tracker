@@ -80,10 +80,11 @@
   max-width: 720px;
   margin: 0 auto;
   padding: 0 8px;
+  justify-content: center;
 }
 
 .tab {
-  padding: 14px 22px;
+  padding: 14px 28px;
   font-size: 14px;
   font-weight: 500;
   color: var(--text-secondary);
