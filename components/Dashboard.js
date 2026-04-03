@@ -1,14 +1,14 @@
 import styles from './Dashboard.module.css'
 
 const LOCATION_COLORS = [
-  { bg: '#E8EDF5', color: '#2C4F8A', border: '#B8C8E8' }, // blue
-  { bg: '#EDE8F5', color: '#5A3D8A', border: '#C8B8E8' }, // purple
-  { bg: '#E8F2F5', color: '#1E6B7A', border: '#B8D8E0' }, // teal
-  { bg: '#F5E8F0', color: '#8A2C6B', border: '#E8B8D8' }, // rose
-  { bg: '#E8EEF5', color: '#2C5F7A', border: '#B8D0E8' }, // slate blue
-  { bg: '#F0E8F5', color: '#6B2C8A', border: '#D8B8E8' }, // violet
-  { bg: '#E8F5F2', color: '#1E7A6B', border: '#B8E0D8' }, // cyan
-  { bg: '#F5EBE8', color: '#8A4A2C', border: '#E8C8B8' }, // sienna
+  { bg: '#E8EDF5', color: '#2C4F8A', border: '#B8C8E8' },
+  { bg: '#EDE8F5', color: '#5A3D8A', border: '#C8B8E8' },
+  { bg: '#E8F2F5', color: '#1E6B7A', border: '#B8D8E0' },
+  { bg: '#F5E8F0', color: '#8A2C6B', border: '#E8B8D8' },
+  { bg: '#E8EEF5', color: '#2C5F7A', border: '#B8D0E8' },
+  { bg: '#F0E8F5', color: '#6B2C8A', border: '#D8B8E8' },
+  { bg: '#E8F5F2', color: '#1E7A6B', border: '#B8E0D8' },
+  { bg: '#F5EBE8', color: '#8A4A2C', border: '#E8C8B8' },
 ]
 function getLocationColor(name) {
   if (!name) return LOCATION_COLORS[0]
@@ -31,7 +31,6 @@ function LocationPill({ name }) {
   )
 }
 
-
 function fmtDate(str) {
   if (!str) return ''
   return new Date(str).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
@@ -47,7 +46,7 @@ function getLastAction(issue) {
 
   if (issue.statusLog?.length) {
     const last = [...issue.statusLog].sort((a, b) => new Date(b.ts) - new Date(a.ts))[0]
-    const labels = { submitted: 'Submitted', identified: 'Identified', discussing: 'Discussing', solved: 'Solved', archived: 'Archived' }
+    const labels = { submitted: 'Submitted', identified: 'Identified', assigned: 'Assigned', discussing: 'Discussing', solved: 'Solved', archived: 'Archived' }
     events.push({ ts: last.ts, by: last.by, what: `Marked as ${labels[last.status] || last.status}` })
   }
 
@@ -57,7 +56,10 @@ function getLastAction(issue) {
   }
 
   if (issue.assignedAt && issue.assignedBy) {
-    events.push({ ts: issue.assignedAt, by: issue.assignedBy, what: `Assigned to ${issue.assignedTo}` })
+    const names = Array.isArray(issue.assignedTo)
+      ? issue.assignedTo.join(', ')
+      : String(issue.assignedTo || '')
+    events.push({ ts: issue.assignedAt, by: issue.assignedBy, what: `Assigned to ${names}` })
   }
 
   if (issue.realIssueAt && issue.realIssueBy) {

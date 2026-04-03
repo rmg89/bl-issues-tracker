@@ -79,11 +79,11 @@
   gap: 0;
   max-width: 720px;
   margin: 0 auto;
-  padding: 0 24px;
+  padding: 0 8px;
 }
 
 .tab {
-  padding: 14px 18px;
+  padding: 14px 22px;
   font-size: 14px;
   font-weight: 500;
   color: var(--text-secondary);
@@ -97,6 +97,7 @@
   align-items: center;
   gap: 7px;
   transition: color 0.15s;
+  white-space: nowrap;
 }
 
 .tab:hover {
@@ -200,6 +201,7 @@
     max-width: 100%;
   }
 }
+
 .locationSelect {
   font-size: 13px;
   padding: 5px 10px;

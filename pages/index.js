@@ -186,8 +186,8 @@ export default function Home() {
                 {activeCount > 0 && <span className={styles.count}>{activeCount}</span>}
               </button>
               <button className={`${styles.tab} ${tab === 'owner' ? styles.tabActive : ''}`} onClick={() => switchTab('owner')}>
-                <span className={styles.tabLabelFull}>By owner</span>
-                <span className={styles.tabLabelShort}>By owner</span>
+                <span className={styles.tabLabelFull}>By manager</span>
+                <span className={styles.tabLabelShort}>By mgr</span>
               </button>
               <button className={`${styles.tab} ${tab === 'team' ? styles.tabActive : ''}`} onClick={() => switchTab('team')}>
                 <span className={styles.tabLabelFull}>Manage team</span>

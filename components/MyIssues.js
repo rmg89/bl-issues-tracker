@@ -8,7 +8,7 @@ function fmtDate(str) {
 const STATUS_LABEL = {
   submitted: 'Submitted',
   identified: 'Identified',
-  assigned: 'Assigned',
+  assigned: 'In progress',
   solved: 'Solved',
   archived: 'Archived',
 }
@@ -16,20 +16,26 @@ const STATUS_LABEL = {
 function getStatusContext(issue) {
   switch (issue.status) {
     case 'submitted':
-      if (issue.investigatingName || issue.investigating) {
-        return `Investigating: ${issue.investigatingName || issue.investigating}`
-      }
-      return null
+      return 'Received — someone will look into it soon'
     case 'identified':
-      return issue.investigatingName ? `Identified by ${issue.investigatingName}` : null
-    case 'assigned':
-      const parts = []
-      if (issue.managerName || issue.manager) parts.push(`Manager: ${issue.managerName || issue.manager}`)
-      const assignedNames = issue.assignedToNames?.length ? issue.assignedToNames.join(', ') : issue.assignedTo?.join?.(', ') || ''
-      if (assignedNames) parts.push(`Assigned to: ${assignedNames}`)
-      return parts.length ? parts.join(' · ') : null
-    case 'solved':
-      return 'Solved ✓'
+      return issue.investigatingName
+        ? `Looked into by ${issue.investigatingName} · Under review`
+        : 'Under review'
+    case 'assigned': {
+      const manager = issue.managerName || issue.manager
+      const since = issue.assignedAt ? ` · In progress since ${fmtDate(issue.assignedAt)}` : ' · In progress'
+      return manager
+        ? `Manager: ${manager}${since}`
+        : `In progress${issue.assignedAt ? ' since ' + fmtDate(issue.assignedAt) : ''}`
+    }
+    case 'solved': {
+      const manager = issue.managerName || issue.manager
+      const solvedEntry = (issue.statusLog || []).find(l => l.status === 'solved')
+      const when = issue.solutionAt
+        ? ` · ${fmtDate(issue.solutionAt)}`
+        : solvedEntry ? ` · ${fmtDate(solvedEntry.ts)}` : ''
+      return manager ? `Resolved by ${manager}${when}` : `Resolved${when}`
+    }
     case 'archived':
       return 'Archived'
     default:
