@@ -55,7 +55,7 @@
   min-width: 0;
 }
 
-/* Wrapper for user name + role badge + sign out button */
+/* Wrapper for user name + role badge + sign out — desktop: normal inline flow */
 .navActions {
   display: flex;
   align-items: center;
@@ -245,13 +245,13 @@
     align-items: center;
   }
 
-  /* Brand: top-left, takes remaining space */
+  /* Brand takes remaining space on first row */
   .navBrand {
     flex: 1;
     min-width: 0;
   }
 
-  /* navRight wraps below brand+actions on mobile */
+  /* navRight wraps so location can drop to second row */
   .navRight {
     flex-wrap: wrap;
     gap: 6px;
@@ -259,7 +259,7 @@
     justify-content: flex-end;
   }
 
-  /* navActions (sign out etc) stays on top row, right-aligned */
+  /* navActions stays on first row, right of brand */
   .navActions {
     flex-shrink: 0;
     gap: 6px;
@@ -276,7 +276,7 @@
     padding: 5px 10px;
   }
 
-  /* Location drops to its own full-width row below */
+  /* Location drops to its own full-width second row */
   .locationSelect {
     order: 2;
     flex-basis: 100%;
