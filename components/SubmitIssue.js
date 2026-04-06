@@ -14,7 +14,6 @@ export default function SubmitIssue({ currentUser, locations, activeLocationId, 
   const [error, setError] = useState('')
 
   const selectedLocation = locations?.find(l => l.id === locationId)
-  // Build a display name: "Location Name — equipment/area" if equipment filled
   const fullLocationName = selectedLocation
     ? (equipment.trim() ? `${selectedLocation.name} — ${equipment.trim()}` : selectedLocation.name)
     : equipment.trim()
@@ -63,7 +62,7 @@ export default function SubmitIssue({ currentUser, locations, activeLocationId, 
   }
 
   return (
-    <div className="card" style={{ maxWidth: 560 }}>
+    <div className="card">
       <div className="section-label" style={{ marginTop: 0, marginBottom: 16 }}>New equipment / facility issue</div>
 
       <div className="form-group">
@@ -85,7 +84,6 @@ export default function SubmitIssue({ currentUser, locations, activeLocationId, 
         </select>
       </div>
 
-      {/* Location: show dropdown if multiple locations available, otherwise show locked label */}
       {locations && locations.length > 1 ? (
         <div className="form-group">
           <label>Location</label>
