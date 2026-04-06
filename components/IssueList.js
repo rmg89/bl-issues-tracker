@@ -141,7 +141,6 @@ export default function IssueList({ issues, locations, onSelect, isAdmin, initia
     return list
   }, [issues, search, sortBy, showArchived])
 
-  // By manager grouping
   const managerGroups = useMemo(() => {
     if (viewMode !== 'bymanager') return null
     const active = issues.filter(i => i.status !== 'archived')
@@ -157,12 +156,7 @@ export default function IssueList({ issues, locations, onSelect, isAdmin, initia
       issues: sortIssues(active.filter(i => i.manager === u.username)),
     })).filter(g => g.issues.length > 0)
 
-    return {
-      needsManager,
-      notYetIdentified,
-      solvedNoManager,
-      managerGroups: groups,
-    }
+    return { needsManager, notYetIdentified, solvedNoManager, managerGroups: groups }
   }, [issues, users, viewMode])
 
   function renderCard(issue) {
@@ -239,6 +233,8 @@ export default function IssueList({ issues, locations, onSelect, isAdmin, initia
   return (
     <div>
       <div className={styles.toolbar}>
+
+        {/* Row 1: search + view toggle */}
         <input
           type="text"
           className={styles.search}
@@ -247,34 +243,37 @@ export default function IssueList({ issues, locations, onSelect, isAdmin, initia
           onChange={e => setSearch(e.target.value)}
         />
         {!showArchived && (
-          <>
-            {viewMode === 'list' && (
-              <select className={styles.sort} value={sortBy} onChange={e => setSortBy(e.target.value)}>
-                <optgroup label="Date">
-                  <option value="newest">Newest first</option>
-                  <option value="oldest">Oldest first</option>
-                </optgroup>
-                <optgroup label="Urgency">
-                  <option value="urgency_high">Highest urgency first</option>
-                  <option value="urgency_low">Lowest urgency first</option>
-                </optgroup>
-                <optgroup label="Status">
-                  <option value="status_active">Active first</option>
-                  <option value="status_resolved">Resolved first</option>
-                </optgroup>
-              </select>
-            )}
-            <div className={styles.viewToggle}>
-              <button
-                className={`${styles.viewToggleBtn} ${viewMode === 'list' ? styles.viewToggleActive : ''}`}
-                onClick={() => setViewMode('list')}
-              >List</button>
-              <button
-                className={`${styles.viewToggleBtn} ${viewMode === 'bymanager' ? styles.viewToggleActive : ''}`}
-                onClick={() => setViewMode('bymanager')}
-              >By manager</button>
-            </div>
-          </>
+          <div className={styles.viewToggle}>
+            <button
+              className={`${styles.viewToggleBtn} ${viewMode === 'list' ? styles.viewToggleActive : ''}`}
+              onClick={() => setViewMode('list')}
+            >List</button>
+            <button
+              className={`${styles.viewToggleBtn} ${viewMode === 'bymanager' ? styles.viewToggleActive : ''}`}
+              onClick={() => setViewMode('bymanager')}
+            >By manager</button>
+          </div>
+        )}
+
+        {/* Row break on mobile — invisible full-width element */}
+        <div className={styles.toolbarBreak} />
+
+        {/* Row 2: sort + archived */}
+        {!showArchived && viewMode === 'list' && (
+          <select className={styles.sort} value={sortBy} onChange={e => setSortBy(e.target.value)}>
+            <optgroup label="Date">
+              <option value="newest">Newest first</option>
+              <option value="oldest">Oldest first</option>
+            </optgroup>
+            <optgroup label="Urgency">
+              <option value="urgency_high">Highest urgency first</option>
+              <option value="urgency_low">Lowest urgency first</option>
+            </optgroup>
+            <optgroup label="Status">
+              <option value="status_active">Active first</option>
+              <option value="status_resolved">Resolved first</option>
+            </optgroup>
+          </select>
         )}
         {archivedCount > 0 && (
           <button
@@ -284,6 +283,7 @@ export default function IssueList({ issues, locations, onSelect, isAdmin, initia
             {showArchived ? '← Back' : `Archived (${archivedCount})`}
           </button>
         )}
+
       </div>
 
       {showArchived && (
