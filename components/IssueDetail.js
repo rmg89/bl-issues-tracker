@@ -430,9 +430,24 @@ export default function IssueDetail({ issue, users, currentUser, locations, perm
           <span className={`status-badge s-${issue.status}`}>{STEP_LABELS[si] || issue.status}</span>
         </div>
         {issue.description && <p className={styles.desc}>{issue.description}</p>}
+
+        {/* ── Row 1: Submitted by info ── */}
         <div className={styles.chips}>
           <span className={styles.chip}>By {issue.submittedByName || issue.submittedBy}{areaEquipment ? ` · ${areaEquipment}` : ''} · {fmtDate(issue.createdAt)} at {fmtTime(issue.createdAt)}</span>
-          {locations && locations.length > 0 && (
+        </div>
+
+        {/* ── Row 2: Reported via ── */}
+        {issue.reportedVia && (
+          <div className={styles.chips}>
+            <span className={styles.chip}>
+              Reported by {issue.reportedVia}{issue.reportedByName ? `: ${issue.reportedByName}` : ''}
+            </span>
+          </div>
+        )}
+
+        {/* ── Row 3: Location ── */}
+        {locations && locations.length > 0 && (
+          <div className={styles.chips}>
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
               <LocationPill name={gymLocation} />
               <span className={styles.changeUrgency}>
@@ -443,14 +458,11 @@ export default function IssueDetail({ issue, users, currentUser, locations, perm
                 </select>
               </span>
             </span>
-          )}
-        </div>
-        <div className={styles.chips} style={{ marginTop: 6 }}>
-          {issue.reportedVia && (
-            <span className={styles.chip}>
-              Reported by {issue.reportedVia}{issue.reportedByName ? `: ${issue.reportedByName}` : ''}
-            </span>
-          )}
+          </div>
+        )}
+
+        {/* ── Row 4: Urgency ── */}
+        <div className={styles.chips} style={{ marginBottom: '1rem' }}>
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
             <span className={`${styles.urgencyTag} ${styles['u_' + urgency]}`}>{urgency} urgency</span>
             <span className={styles.changeUrgency}>

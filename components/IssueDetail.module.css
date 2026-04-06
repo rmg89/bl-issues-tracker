@@ -73,6 +73,7 @@
   overflow: hidden;
   border: 0.5px solid var(--border-strong);
   height: 90px;
+  margin-bottom: 0;
 }
 
 .step {
@@ -200,30 +201,13 @@
   flex-shrink: 0;
 }
 
-@media (max-width: 600px) {
-  .track {
-    flex-wrap: nowrap;
-    overflow-x: auto;
-  }
-
-  .step {
-    min-width: 64px;
-    padding: 8px 2px;
-  }
-
-  .stepLabel {
-    font-size: 11px;
-  }
-
-  .stepTs {
-    font-size: 9px;
-  }
-}
-
+/* ── Mobile track: vertical stacked layout ── */
 @media (max-width: 600px) {
   .track {
     flex-direction: column;
+    height: auto;
     overflow: visible;
+    margin-bottom: 1.25rem; /* prevents overlap with phaseBlock */
   }
 
   .step {
@@ -253,5 +237,14 @@
   .stepTs {
     font-size: 11px;
     text-align: right;
+  }
+
+  .phaseBlock {
+    padding: 14px 14px 18px;
+  }
+
+  .floatBar {
+    padding: 10px 14px;
+    gap: 8px;
   }
 }
