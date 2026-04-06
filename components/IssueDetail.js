@@ -125,8 +125,6 @@ function fmtTime(str) {
   return new Date(str).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
 }
 
-const divider = <div style={{ borderTop: '0.5px solid var(--border)', margin: '1rem 0' }} />
-
 export default function IssueDetail({ issue, users, currentUser, locations, permissions, onBack, onUpdate, onToast }) {
   const [realIssue, setRealIssue] = useState(issue.realIssue || '')
   const [solution, setSolution] = useState(issue.solution || '')
@@ -136,7 +134,7 @@ export default function IssueDetail({ issue, users, currentUser, locations, perm
   const [confirmSolve, setConfirmSolve] = useState(false)
   const [confirmSolveTrack, setConfirmSolveTrack] = useState(false)
   const [confirmArchive, setConfirmArchive] = useState(false)
-  const [confirmReopen, setConfirmReopen] = useState(null) // holds the target status
+  const [confirmReopen, setConfirmReopen] = useState(null)
   const assignSectionRef = useRef(null)
   const realIssueRef = useRef(null)
   const [highlightRealIssue, setHighlightRealIssue] = useState(false)
@@ -152,7 +150,6 @@ export default function IssueDetail({ issue, users, currentUser, locations, perm
     ? rawLog
     : [{ status: 'submitted', ts: issue.createdAt, by: issue.submittedByName || issue.submittedBy }, ...rawLog]
 
-  // Sync local state when issue prop updates (e.g. after patch)
   useEffect(() => {
     setRealIssue(issue.realIssue || '')
     setSolution(issue.solution || '')
@@ -195,7 +192,6 @@ export default function IssueDetail({ issue, users, currentUser, locations, perm
   }
 
   async function doRewind(s) {
-    // Strip log entries for steps after the target
     const si_target = STEPS.indexOf(s)
     const newLog = statusLog.filter(l => STEPS.indexOf(l.status) <= si_target)
     await patch({ status: s, statusLog: newLog })
@@ -212,22 +208,17 @@ export default function IssueDetail({ issue, users, currentUser, locations, perm
     const si_target = STEPS.indexOf(s)
     const si_current = STEPS.indexOf(issue.status)
 
-    // Clicking backwards
     if (si_target < si_current) {
       if (issue.status === 'archived') {
-        // Reopen from archived requires confirm
         clearConfirms()
         setConfirmReopen(s)
         return
       }
-      // Allow going back to any step freely
       await doRewind(s)
       return
     }
-    // Same step — toggle off if confirm already open, else no-op
     if (si_target === si_current) return
 
-    // Identified: requires real issue text, auto-saves it
     if (s === 'identified') {
       if (!realIssue.trim()) {
         realIssueRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
@@ -240,7 +231,6 @@ export default function IssueDetail({ issue, users, currentUser, locations, perm
       await doAdvance(s)
       return
     }
-    // Assigned: requires manager + at least one staff, scrolls to section if not
     if (s === 'assigned') {
       if (!manager || assignedTo.length === 0) {
         setAssignError(!manager ? 'Please select a manager responsible.' : 'Please assign at least one staff member.')
@@ -250,13 +240,11 @@ export default function IssueDetail({ issue, users, currentUser, locations, perm
       await assignAndNotify()
       return
     }
-    // Solved: double confirm — track uses inline, bar button uses its own state
     if (s === 'solved') {
       clearConfirms()
       setConfirmSolveTrack(true)
       return
     }
-    // Archived: double confirm only if not already solved
     if (s === 'archived') {
       if (issue.status !== 'solved') { clearConfirms(); setConfirmArchive(true); return }
       await doAdvance(s)
@@ -305,13 +293,8 @@ export default function IssueDetail({ issue, users, currentUser, locations, perm
     onToast('Saved')
   }
 
-  async function saveManager(val) {
-    setManager(val)
-  }
-
-  async function saveAssignedTo(val) {
-    setAssignedTo(val)
-  }
+  async function saveManager(val) { setManager(val) }
+  async function saveAssignedTo(val) { setAssignedTo(val) }
 
   async function addNote() {
     if (!newNote.trim()) return
@@ -346,7 +329,6 @@ export default function IssueDetail({ issue, users, currentUser, locations, perm
         }
       }
 
-      // Patch assignment + status together, auto-saving the define box
       await patch({
         status: 'assigned',
         statusLog: newLog,
@@ -361,7 +343,6 @@ export default function IssueDetail({ issue, users, currentUser, locations, perm
         solutionAt: solution !== issue.solution ? new Date().toISOString() : issue.solutionAt,
       })
 
-      // Notify separately — failure here doesn't undo the assignment
       try {
         await fetch('/api/issues/notify', {
           method: 'POST',
@@ -431,12 +412,12 @@ export default function IssueDetail({ issue, users, currentUser, locations, perm
         </div>
         {issue.description && <p className={styles.desc}>{issue.description}</p>}
 
-        {/* ── Row 1: Submitted by info ── */}
+        {/* Row 1: Submitted by */}
         <div className={styles.chips}>
           <span className={styles.chip}>By {issue.submittedByName || issue.submittedBy}{areaEquipment ? ` · ${areaEquipment}` : ''} · {fmtDate(issue.createdAt)} at {fmtTime(issue.createdAt)}</span>
         </div>
 
-        {/* ── Row 2: Reported via ── */}
+        {/* Row 2: Reported via */}
         {issue.reportedVia && (
           <div className={styles.chips}>
             <span className={styles.chip}>
@@ -445,7 +426,7 @@ export default function IssueDetail({ issue, users, currentUser, locations, perm
           </div>
         )}
 
-        {/* ── Row 3: Location ── */}
+        {/* Row 3: Location */}
         {locations && locations.length > 0 && (
           <div className={styles.chips}>
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
@@ -461,7 +442,7 @@ export default function IssueDetail({ issue, users, currentUser, locations, perm
           </div>
         )}
 
-        {/* ── Row 4: Urgency ── */}
+        {/* Row 4: Urgency */}
         <div className={styles.chips} style={{ marginBottom: '1rem' }}>
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
             <span className={`${styles.urgencyTag} ${styles['u_' + urgency]}`}>{urgency} urgency</span>
@@ -517,11 +498,6 @@ export default function IssueDetail({ issue, users, currentUser, locations, perm
             const isConfirmingArchive = confirmArchive && s === 'archived'
             const isConfirmingReopen = confirmReopen === s
 
-            // Show archive nudge above the archived step if solved 7+ days ago
-            const solvedLog = statusLog.find(l => l.status === 'solved')
-            const solvedTs = solvedLog ? new Date(solvedLog.ts) : null
-            const readyToArchive = issue.status === 'solved' && solvedTs && (Date.now() - solvedTs) > 7 * 24 * 60 * 60 * 1000
-            const showArchiveNudge = s === 'archived' && readyToArchive && !isConfirmingArchive
             if (isConfirmingSolve) return (
               <div key={s} className={`${styles.step} ${styles.active}`}
                 style={{ flexDirection: 'column', gap: 5, padding: '8px 6px', minHeight: 56 }}>
@@ -593,7 +569,7 @@ export default function IssueDetail({ issue, users, currentUser, locations, perm
           </div>
 
           {/* Who's looking into this */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16, flexWrap: 'wrap' }}>
             <div className="section-label" style={{ marginTop: 0, marginBottom: 0, whiteSpace: 'nowrap' }}>Who&apos;s looking into this?</div>
             <select value={investigating} onChange={e => saveInvestigating(e.target.value)} style={{ marginBottom: 0, width: 'auto', minWidth: 140, maxWidth: 200 }}>
               <option value="">Unassigned</option>
@@ -604,20 +580,9 @@ export default function IssueDetail({ issue, users, currentUser, locations, perm
             )}
           </div>
 
-          {/* Real issue */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 6 }}>
+          {/* What's the actual problem — header full width, buttons below textarea */}
+          <div className={styles.identifyHeader}>
             <div className="section-label" style={{ marginTop: 0, marginBottom: 0 }}>What&apos;s the actual problem?</div>
-            <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-              <button onClick={async () => { await patch({ realIssue, realIssueBy: currentUser.name, realIssueAt: new Date().toISOString() }); onToast('Saved') }}>Save</button>
-              {issue.status === 'submitted' && (
-                <button
-                  className="btn-primary"
-                  onClick={() => markStatus('identified')}
-                  disabled={!realIssue.trim()}
-                  title={!realIssue.trim() ? 'Fill in the real issue first' : ''}
-                >Mark identified →</button>
-              )}
-            </div>
           </div>
           <textarea
             ref={realIssueRef}
@@ -634,8 +599,19 @@ export default function IssueDetail({ issue, users, currentUser, locations, perm
             }}
           />
           {issue.realIssueBy && (
-            <div className={styles.fieldMeta}>{`Last edited by ${issue.realIssueBy} · ${fmtDateTime(issue.realIssueAt)}`}</div>
+            <div className={styles.fieldMeta} style={{ marginBottom: 8 }}>{`Last edited by ${issue.realIssueBy} · ${fmtDateTime(issue.realIssueAt)}`}</div>
           )}
+          <div className={styles.identifyActions}>
+            <button onClick={async () => { await patch({ realIssue, realIssueBy: currentUser.name, realIssueAt: new Date().toISOString() }); onToast('Saved') }}>Save</button>
+            {issue.status === 'submitted' && (
+              <button
+                className="btn-primary"
+                onClick={() => markStatus('identified')}
+                disabled={!realIssue.trim()}
+                title={!realIssue.trim() ? 'Fill in the real issue first' : ''}
+              >Mark identified →</button>
+            )}
+          </div>
         </div>
 
         {/* ══ PHASE 2: DISCUSS · DEFINE · ASSIGN ══ */}

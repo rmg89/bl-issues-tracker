@@ -167,9 +167,41 @@
 .identifyLeft { flex: 1; min-width: 0; }
 .identifyRight { width: 200px; flex-shrink: 0; }
 
-@media (max-width: 640px) {
+/* Identify section: header and actions */
+.identifyHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+
+.identifyActions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+@media (max-width: 600px) {
   .identifyRow { flex-direction: column; }
   .identifyRight { width: 100%; }
+
+  /* Header just shows the label, full width */
+  .identifyHeader {
+    display: block;
+    margin-bottom: 8px;
+  }
+
+  /* Buttons move below the textarea, full width row */
+  .identifyActions {
+    margin-top: 8px;
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  .identifyActions button {
+    flex: 1;
+  }
 }
 
 .fieldMeta { font-size: 11px; color: var(--text-tertiary); margin: 0; padding: 0; display: block; line-height: 1.4; }

@@ -92,8 +92,8 @@ export default function Dashboard({ issues, currentUser, activeLocation, onNavig
   const open = active.filter(i => i.status !== 'solved')
   const highUrgency = open.filter(i => i.urgency === 'high')
 
-  // Unassigned: identified but no manager yet
-  const unassigned = issues.filter(i =>
+  // Identified but no manager selected yet
+  const needsManager = issues.filter(i =>
     i.status === 'identified' && (!i.manager || !String(i.manager).trim())
   )
 
@@ -148,8 +148,8 @@ export default function Dashboard({ issues, currentUser, activeLocation, onNavig
           <div className={styles.statLabel}>High urgency</div>
         </div>
         <div className={`${styles.stat} ${styles.statAmber}`} onClick={() => onNavigate('issues', 'newest', null, 'bymanager')}>
-          <div className={styles.statNumber}>{unassigned.length}</div>
-          <div className={styles.statLabel}>Needs manager</div>
+          <div className={styles.statNumber}>{needsManager.length}</div>
+          <div className={styles.statLabel}>Select manager</div>
         </div>
         <div className={`${styles.stat} ${styles.statGreen}`} onClick={() => onNavigate('issues', 'status_resolved', null)}>
           <div className={styles.statNumber}>{resolvedThisWeek.length}</div>
