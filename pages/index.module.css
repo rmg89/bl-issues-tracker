@@ -219,26 +219,23 @@
 ══════════════════════════════ */
 @media (max-width: 600px) {
 
-  /* Nav: stack into two rows */
+  /* Nav: two rows — brand + sign out on top, location below */
   .navInner {
     flex-wrap: wrap;
     padding: 10px 14px;
     gap: 8px;
+    align-items: center;
   }
 
   .navBrand {
     flex: 1;
   }
 
-  /* Right side: sign out stays on first row, right-aligned */
+  /* Sign out stays top-right, inline with brand */
   .navRight {
     flex-shrink: 0;
     gap: 6px;
-  }
-
-  /* Hide user name on mobile — role badge is enough */
-  .navUser {
-    display: none;
+    align-items: center;
   }
 
   .navRight button {
@@ -246,25 +243,30 @@
     padding: 5px 10px;
   }
 
-  /* Location select goes full-width on second row */
+  /* Hide user name on mobile to save space */
+  .navUser {
+    display: none;
+  }
+
+  /* Location select stretches full width on second row */
   .locationSelect {
     width: 100%;
     max-width: 100%;
     min-width: 0;
     font-size: 13px;
     padding: 6px 10px;
-    order: 10; /* push to own row via flex-wrap */
     flex-basis: 100%;
+    order: 10;
   }
 
   .locationBadge {
     font-size: 12px;
-    order: 10;
     flex-basis: 100%;
+    order: 10;
     text-align: center;
   }
 
-  /* Tab bar: simple scrollable flex, no grid */
+  /* Tab bar: clean scrollable flex, no grid */
   .tabsInner {
     display: flex;
     grid-template-columns: none;
@@ -277,7 +279,6 @@
 
   .tabsInner::-webkit-scrollbar { display: none; }
 
-  /* Dissolve layout divs */
   .tabCol,
   .tabLeft,
   .tabCenter,
@@ -291,8 +292,9 @@
     flex-shrink: 0;
   }
 
+  /* Settings: bigger icon + label, easier to tap */
   .tabSettings {
-    padding: 11px 14px;
+    padding: 11px 16px;
     font-size: 13px;
     flex-shrink: 0;
     margin-left: auto;

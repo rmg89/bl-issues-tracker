@@ -196,7 +196,7 @@ export default function Home() {
               <div className={styles.tabRight}>
                 <button className={`${styles.tabSettings} ${tab === 'settings' ? styles.tabSettingsActive : ''}`} onClick={() => switchTab('settings')}>
                   <span className={styles.tabLabelFull}>⚙ Settings</span>
-                  <span className={styles.tabLabelShort}>⚙</span>
+                  <span className={styles.tabLabelShort}>⚙ Settings</span>
                 </button>
               </div>
             </>
