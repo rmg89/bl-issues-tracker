@@ -412,23 +412,13 @@ export default function IssueDetail({ issue, users, currentUser, locations, perm
         </div>
         {issue.description && <p className={styles.desc}>{issue.description}</p>}
 
-        {/* Row 1: Submitted by */}
-        <div className={styles.chips}>
-          <span className={styles.chip}>By {issue.submittedByName || issue.submittedBy}{areaEquipment ? ` · ${areaEquipment}` : ''} · {fmtDate(issue.createdAt)} at {fmtTime(issue.createdAt)}</span>
-        </div>
-
-        {/* Row 2: Reported via */}
-        {issue.reportedVia && (
-          <div className={styles.chips}>
-            <span className={styles.chip}>
-              Reported by {issue.reportedVia}{issue.reportedByName ? `: ${issue.reportedByName}` : ''}
-            </span>
-          </div>
-        )}
-
-        {/* Row 3: Location */}
-        {locations && locations.length > 0 && (
-          <div className={styles.chips}>
+        {/* Row 1 (desktop): "By..." chip + location pill inline
+            Row 1+2 (mobile): stacked */}
+        <div className={styles.chipsRow}>
+          <span className={styles.chip}>
+            By {issue.submittedByName || issue.submittedBy}{areaEquipment ? ` · ${areaEquipment}` : ''} · {fmtDate(issue.createdAt)} at {fmtTime(issue.createdAt)}
+          </span>
+          {locations && locations.length > 0 && (
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
               <LocationPill name={gymLocation} />
               <span className={styles.changeUrgency}>
@@ -439,11 +429,19 @@ export default function IssueDetail({ issue, users, currentUser, locations, perm
                 </select>
               </span>
             </span>
-          </div>
-        )}
+          )}
+        </div>
 
-        {/* Row 4: Urgency */}
-        <div className={styles.chips} style={{ marginBottom: '1rem' }}>
+        {/* Row 2 (desktop): "Reported by..." chip + urgency tag inline
+            Row 3+4 (mobile): stacked */}
+        <div className={styles.chipsRow} style={{ marginBottom: '1rem' }}>
+          {issue.reportedVia ? (
+            <span className={styles.chip}>
+              Reported by {issue.reportedVia}{issue.reportedByName ? `: ${issue.reportedByName}` : ''}
+            </span>
+          ) : (
+            <span /> /* spacer so urgency still aligns right when no reportedVia */
+          )}
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
             <span className={`${styles.urgencyTag} ${styles['u_' + urgency]}`}>{urgency} urgency</span>
             <span className={styles.changeUrgency}>
@@ -580,7 +578,7 @@ export default function IssueDetail({ issue, users, currentUser, locations, perm
             )}
           </div>
 
-          {/* What's the actual problem — header full width, buttons below textarea */}
+          {/* What's the actual problem — full-width header, buttons below textarea */}
           <div className={styles.identifyHeader}>
             <div className="section-label" style={{ marginTop: 0, marginBottom: 0 }}>What&apos;s the actual problem?</div>
           </div>
@@ -602,14 +600,18 @@ export default function IssueDetail({ issue, users, currentUser, locations, perm
             <div className={styles.fieldMeta} style={{ marginBottom: 8 }}>{`Last edited by ${issue.realIssueBy} · ${fmtDateTime(issue.realIssueAt)}`}</div>
           )}
           <div className={styles.identifyActions}>
-            <button onClick={async () => { await patch({ realIssue, realIssueBy: currentUser.name, realIssueAt: new Date().toISOString() }); onToast('Saved') }}>Save</button>
+            <button onClick={async () => { await patch({ realIssue, realIssueBy: currentUser.name, realIssueAt: new Date().toISOString() }); onToast('Saved') }}>
+              Save
+            </button>
             {issue.status === 'submitted' && (
               <button
                 className="btn-primary"
                 onClick={() => markStatus('identified')}
                 disabled={!realIssue.trim()}
                 title={!realIssue.trim() ? 'Fill in the real issue first' : ''}
-              >Mark identified →</button>
+              >
+                Mark identified →
+              </button>
             )}
           </div>
         </div>
@@ -645,14 +647,12 @@ export default function IssueDetail({ issue, users, currentUser, locations, perm
             <button onClick={async () => { await patch({ solution, solutionBy: currentUser.name, solutionAt: new Date().toISOString() }); onToast('Saved') }}
               style={{ flexShrink: 0 }}>Save</button>
           </div>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <textarea
-              placeholder="What specifically are we doing, and by when?"
-              value={solution}
-              onChange={e => setSolution(e.target.value)}
-              style={{ flex: 1, minHeight: 80, marginBottom: 0 }}
-            />
-          </div>
+          <textarea
+            placeholder="What specifically are we doing, and by when?"
+            value={solution}
+            onChange={e => setSolution(e.target.value)}
+            style={{ flex: 1, minHeight: 80, marginBottom: 0, width: '100%' }}
+          />
           {issue.solutionBy && (
             <div className={styles.fieldMeta} style={{ marginTop: 4 }}>Last edited by {issue.solutionBy} · {fmtDateTime(issue.solutionAt)}</div>
           )}
