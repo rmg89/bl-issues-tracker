@@ -141,16 +141,8 @@ export default function Home() {
             <span className={styles.navTitle}>Issues Tracker</span>
           </div>
           <div className={styles.navRight}>
-            {/* Sign out group — always first in DOM so it stays on top row on mobile */}
-            <div className={styles.navActions}>
-              <span className={styles.navUser}>{currentUser.name}</span>
-              {isGlobalAdmin && <span className="admin-tag">admin</span>}
-              {!isGlobalAdmin && perms.role === 'manager' && (
-                <span className="admin-tag" style={{ background: 'var(--blue, #1565C0)' }}>manager</span>
-              )}
-              <button onClick={handleLogout} style={{ fontSize: 13, padding: '5px 12px' }}>Sign out</button>
-            </div>
-            {/* Location — drops to second row on mobile */}
+            {/* Location first in DOM = left of sign out on desktop.
+                On mobile, CSS order moves it below via order: 2 */}
             {canSwitchLocations && (
               <select
                 className={styles.locationSelect}
@@ -168,6 +160,16 @@ export default function Home() {
             {!canSwitchLocations && activeLocation && (
               <span className={styles.locationBadge}>{activeLocation.name}</span>
             )}
+            {/* navActions second in DOM = right of location on desktop.
+                On mobile, CSS order: 1 keeps it on the top row */}
+            <div className={styles.navActions}>
+              <span className={styles.navUser}>{currentUser.name}</span>
+              {isGlobalAdmin && <span className="admin-tag">admin</span>}
+              {!isGlobalAdmin && perms.role === 'manager' && (
+                <span className="admin-tag" style={{ background: 'var(--blue, #1565C0)' }}>manager</span>
+              )}
+              <button onClick={handleLogout} style={{ fontSize: 13, padding: '5px 12px' }}>Sign out</button>
+            </div>
           </div>
         </div>
       </nav>
