@@ -55,7 +55,6 @@
   min-width: 0;
 }
 
-/* Wrapper for user name + role badge + sign out — desktop: normal inline flow */
 .navActions {
   display: flex;
   align-items: center;
@@ -82,7 +81,6 @@
   z-index: 20;
 }
 
-/* Manager tab bar: 5-column grid */
 .tabsInner {
   display: grid;
   grid-template-columns: 1fr 1fr auto 1fr 1fr;
@@ -92,7 +90,6 @@
   padding: 0;
 }
 
-/* Trainer/staff tab bar: centered flex */
 .tabsInnerTrainer {
   display: flex;
   justify-content: center;
@@ -102,21 +99,9 @@
   padding: 0;
 }
 
-.tabCol {
-  display: flex;
-  justify-content: center;
-}
-
-.tabLeft {
-  display: flex;
-  justify-content: flex-start;
-}
-
-.tabCenter {
-  display: flex;
-  justify-content: center;
-}
-
+.tabCol { display: flex; justify-content: center; }
+.tabLeft { display: flex; justify-content: flex-start; }
+.tabCenter { display: flex; justify-content: center; }
 .tabRight {
   display: flex;
   justify-content: flex-end;
@@ -141,16 +126,8 @@
   transition: color 0.15s;
   white-space: nowrap;
 }
-
-.tab:hover {
-  color: var(--text);
-  background: none;
-}
-
-.tabActive {
-  color: var(--bl-orange) !important;
-  border-bottom-color: var(--bl-orange);
-}
+.tab:hover { color: var(--text); background: none; }
+.tabActive { color: var(--bl-orange) !important; border-bottom-color: var(--bl-orange); }
 
 .tabSettings {
   padding: 14px 16px;
@@ -170,13 +147,8 @@
   white-space: nowrap;
   letter-spacing: 0.01em;
 }
-
 .tabSettings:hover { color: var(--text-secondary); background: none; }
-
-.tabSettingsActive {
-  color: var(--bl-orange) !important;
-  border-bottom-color: var(--bl-orange);
-}
+.tabSettingsActive { color: var(--bl-orange) !important; border-bottom-color: var(--bl-orange); }
 
 .count {
   background: var(--bl-orange);
@@ -189,7 +161,6 @@
   text-align: center;
 }
 
-/* Short/full label switching */
 .tabLabelShort { display: none; }
 .tabLabelFull { display: inline; }
 
@@ -210,6 +181,13 @@
   color: var(--text-secondary);
   font-size: 14px;
 }
+
+/* navRow2: mobile-only row for location + sign out (hidden on desktop) */
+.navRow2 { display: none; }
+
+/* These wrappers show/hide parts of the nav depending on viewport */
+.navLocationDesktop { display: contents; }
+.navSignOutDesktop { display: contents; }
 
 /* ── Location ── */
 .locationSelect {
@@ -238,60 +216,61 @@
 ══════════════════════════════ */
 @media (max-width: 600px) {
 
+  /* Grid: 2 cols × 2 rows
+     Row 1: brand (left) | admin badge (right, via navRight shrunk)
+     Row 2: location select (spans full width, left) | sign out (right) */
   .navInner {
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    grid-template-rows: auto auto;
     padding: 10px 14px;
-    gap: 6px;
+    gap: 6px 8px;
     align-items: center;
   }
 
-  /* Brand takes remaining space on first row */
+  /* Row 1 left: brand */
   .navBrand {
-    flex: 1;
-    min-width: 0;
+    grid-column: 1;
+    grid-row: 1;
   }
 
-  /* navRight wraps so location can drop to second row */
+  /* Row 1 right: just the role badge on mobile */
   .navRight {
-    flex-wrap: wrap;
-    gap: 6px;
+    grid-column: 2;
+    grid-row: 1;
+    display: flex;
     align-items: center;
+    gap: 6px;
     justify-content: flex-end;
   }
 
-  /* navActions stays on first row, right of brand */
-  .navActions {
-    flex-shrink: 0;
-    gap: 6px;
-    order: 1;
+  /* Hide user name, location, and sign out from their desktop positions */
+  .navUser { display: none; }
+  .navLocationDesktop { display: none; }
+  .navSignOutDesktop { display: none; }
+
+  /* Row 2: location (flex-grow) + sign out (right) */
+  .navRow2 {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    display: flex;
+    align-items: center;
+    gap: 8px;
   }
 
-  /* Hide user name on mobile */
-  .navUser {
-    display: none;
-  }
-
-  .navActions button {
-    font-size: 12px;
-    padding: 5px 10px;
-  }
-
-  /* Location drops to its own full-width second row */
-  .locationSelect {
-    order: 2;
-    flex-basis: 100%;
-    width: 100%;
-    max-width: 100%;
+  .navRow2 .locationSelect {
+    flex: 1;
     min-width: 0;
+    max-width: 100%;
     font-size: 13px;
     padding: 6px 10px;
   }
 
-  .locationBadge {
-    order: 2;
-    flex-basis: 100%;
+  .navRow2 .locationBadge {
+    flex: 1;
+    min-width: 0;
     font-size: 12px;
-    text-align: center;
+    padding: 6px 10px;
   }
 
   /* Manager tab bar: scrollable flex */
@@ -304,43 +283,18 @@
     max-width: 100%;
     padding: 0;
   }
-
   .tabsInner::-webkit-scrollbar { display: none; }
 
-  /* Trainer tab bar: stay centered */
-  .tabsInnerTrainer {
-    max-width: 100%;
-  }
+  .tabsInnerTrainer { max-width: 100%; }
 
-  .tabCol,
-  .tabLeft,
-  .tabCenter,
-  .tabRight {
-    display: contents;
-  }
+  .tabCol, .tabLeft, .tabCenter, .tabRight { display: contents; }
 
-  .tab {
-    padding: 11px 16px;
-    font-size: 13px;
-    flex-shrink: 0;
-  }
-
-  .tabSettings {
-    padding: 11px 16px;
-    font-size: 13px;
-    flex-shrink: 0;
-    margin-left: auto;
-  }
+  .tab { padding: 11px 16px; font-size: 13px; flex-shrink: 0; }
+  .tabSettings { padding: 11px 16px; font-size: 13px; flex-shrink: 0; margin-left: auto; }
 
   .tabLabelShort { display: inline; }
   .tabLabelFull { display: none; }
 
-  .count {
-    font-size: 10px;
-    padding: 1px 5px;
-  }
-
-  .body {
-    padding: 0 12px 5rem;
-  }
+  .count { font-size: 10px; padding: 1px 5px; }
+  .body { padding: 0 12px 5rem; }
 }

@@ -2,14 +2,14 @@ import React, { useState, useRef, useEffect } from 'react'
 import styles from './IssueDetail.module.css'
 
 const LOCATION_COLORS = [
-  { bg: '#E8EDF5', color: '#2C4F8A', border: '#B8C8E8' }, // blue
-  { bg: '#EDE8F5', color: '#5A3D8A', border: '#C8B8E8' }, // purple
-  { bg: '#E8F2F5', color: '#1E6B7A', border: '#B8D8E0' }, // teal
-  { bg: '#F5E8F0', color: '#8A2C6B', border: '#E8B8D8' }, // rose
-  { bg: '#E8EEF5', color: '#2C5F7A', border: '#B8D0E8' }, // slate blue
-  { bg: '#F0E8F5', color: '#6B2C8A', border: '#D8B8E8' }, // violet
-  { bg: '#E8F5F2', color: '#1E7A6B', border: '#B8E0D8' }, // cyan
-  { bg: '#F5EBE8', color: '#8A4A2C', border: '#E8C8B8' }, // sienna
+  { bg: '#E8EDF5', color: '#2C4F8A', border: '#B8C8E8' },
+  { bg: '#EDE8F5', color: '#5A3D8A', border: '#C8B8E8' },
+  { bg: '#E8F2F5', color: '#1E6B7A', border: '#B8D8E0' },
+  { bg: '#F5E8F0', color: '#8A2C6B', border: '#E8B8D8' },
+  { bg: '#E8EEF5', color: '#2C5F7A', border: '#B8D0E8' },
+  { bg: '#F0E8F5', color: '#6B2C8A', border: '#D8B8E8' },
+  { bg: '#E8F5F2', color: '#1E7A6B', border: '#B8E0D8' },
+  { bg: '#F5EBE8', color: '#8A4A2C', border: '#E8C8B8' },
 ]
 function getLocationColor(name) {
   if (!name) return LOCATION_COLORS[0]
@@ -35,7 +35,6 @@ function LocationPill({ name }) {
 function MultiSelectUsers({ value, onChange, users }) {
   const [open, setOpen] = useState(false)
   const ref = useRef(null)
-
   useEffect(() => {
     if (!open) return
     function handleClick(e) {
@@ -44,7 +43,6 @@ function MultiSelectUsers({ value, onChange, users }) {
     document.addEventListener('mousedown', handleClick)
     return () => document.removeEventListener('mousedown', handleClick)
   }, [open])
-
   function toggle(username) {
     onChange(value.includes(username) ? value.filter(u => u !== username) : [...value, username])
   }
@@ -135,6 +133,8 @@ export default function IssueDetail({ issue, users, currentUser, locations, perm
   const [confirmSolveTrack, setConfirmSolveTrack] = useState(false)
   const [confirmArchive, setConfirmArchive] = useState(false)
   const [confirmReopen, setConfirmReopen] = useState(null)
+  const [assignError, setAssignError] = useState('')
+  const [assigning, setAssigning] = useState(false)
   const assignSectionRef = useRef(null)
   const realIssueRef = useRef(null)
   const [highlightRealIssue, setHighlightRealIssue] = useState(false)
@@ -164,8 +164,7 @@ export default function IssueDetail({ issue, users, currentUser, locations, perm
 
   async function patch(fields) {
     const res = await fetch(`/api/issues/${issue.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(fields),
     })
     const updated = await res.json()
@@ -183,9 +182,8 @@ export default function IssueDetail({ issue, users, currentUser, locations, perm
     const newLog = [...statusLog]
     for (let i = si_current + 1; i <= si_target; i++) {
       const step = STEPS[i]
-      if (!newLog.find(l => l.status === step)) {
+      if (!newLog.find(l => l.status === step))
         newLog.push({ status: step, ts: new Date().toISOString(), by: currentUser.name })
-      }
     }
     await patch({ status: s, statusLog: newLog })
     onToast(`Marked as ${STEP_LABELS[STEPS.indexOf(s)]}`)
@@ -199,26 +197,17 @@ export default function IssueDetail({ issue, users, currentUser, locations, perm
   }
 
   function clearConfirms() {
-    setConfirmSolveTrack(false)
-    setConfirmArchive(false)
-    setConfirmReopen(null)
+    setConfirmSolveTrack(false); setConfirmArchive(false); setConfirmReopen(null)
   }
 
   async function advanceStatus(s) {
     const si_target = STEPS.indexOf(s)
     const si_current = STEPS.indexOf(issue.status)
-
     if (si_target < si_current) {
-      if (issue.status === 'archived') {
-        clearConfirms()
-        setConfirmReopen(s)
-        return
-      }
-      await doRewind(s)
-      return
+      if (issue.status === 'archived') { clearConfirms(); setConfirmReopen(s); return }
+      await doRewind(s); return
     }
     if (si_target === si_current) return
-
     if (s === 'identified') {
       if (!realIssue.trim()) {
         realIssueRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
@@ -228,47 +217,32 @@ export default function IssueDetail({ issue, users, currentUser, locations, perm
         return
       }
       await patch({ realIssue, realIssueBy: currentUser.name, realIssueAt: new Date().toISOString() })
-      await doAdvance(s)
-      return
+      await doAdvance(s); return
     }
     if (s === 'assigned') {
       if (!manager || assignedTo.length === 0) {
         setAssignError(!manager ? 'Please select a manager responsible.' : 'Please assign at least one staff member.')
-        assignSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-        return
+        assignSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }); return
       }
-      await assignAndNotify()
-      return
+      await assignAndNotify(); return
     }
-    if (s === 'solved') {
-      clearConfirms()
-      setConfirmSolveTrack(true)
-      return
-    }
+    if (s === 'solved') { clearConfirms(); setConfirmSolveTrack(true); return }
     if (s === 'archived') {
       if (issue.status !== 'solved') { clearConfirms(); setConfirmArchive(true); return }
-      await doAdvance(s)
-      return
+      await doAdvance(s); return
     }
     await doAdvance(s)
   }
 
-  async function markStatus(status) {
-    await advanceStatus(status)
-  }
+  async function markStatus(status) { await advanceStatus(status) }
 
   function coreFields() {
     const investigatingUser = users.find(u => u.username === investigating)
     const managerUser = users.find(u => u.username === manager)
     return {
-      urgency,
-      investigating,
-      investigatingName: investigatingUser?.name || '',
-      manager,
-      managerName: managerUser?.name || '',
-      assignedTo,
-      assignedBy: currentUser.name,
-      assignedAt: new Date().toISOString(),
+      urgency, investigating, investigatingName: investigatingUser?.name || '',
+      manager, managerName: managerUser?.name || '',
+      assignedTo, assignedBy: currentUser.name, assignedAt: new Date().toISOString(),
       assignedEmail: assignedTo.map(u => users.find(x => x.username === u)?.email || '').filter(Boolean).join(','),
       realIssue,
       realIssueBy: realIssue !== issue.realIssue ? currentUser.name : issue.realIssueBy,
@@ -280,10 +254,7 @@ export default function IssueDetail({ issue, users, currentUser, locations, perm
   }
 
   async function saveAll() {
-    setSaving(true)
-    await patch(coreFields())
-    setSaving(false)
-    onToast('Changes saved')
+    setSaving(true); await patch(coreFields()); setSaving(false); onToast('Changes saved')
   }
 
   async function saveInvestigating(val) {
@@ -300,75 +271,44 @@ export default function IssueDetail({ issue, users, currentUser, locations, perm
     if (!newNote.trim()) return
     const note = { text: newNote.trim(), authorName: currentUser.name, ts: new Date().toISOString() }
     await patch({ notes: [...issue.notes, note] })
-    setNewNote('')
-    onToast('Note added')
+    setNewNote(''); onToast('Note added')
   }
-
-  const [assignError, setAssignError] = useState('')
-  const [assigning, setAssigning] = useState(false)
 
   async function assignAndNotify() {
     if (!manager) { setAssignError('Please select a manager responsible.'); return }
     if (assignedTo.length === 0) { setAssignError('Please assign at least one staff member.'); return }
-    setAssignError('')
-    setAssigning(true)
+    setAssignError(''); setAssigning(true)
     try {
       const managerUser = users.find(u => u.username === manager)
-      const assignedEmails = [
-        managerUser?.email,
-        ...assignedTo.map(u => users.find(x => x.username === u)?.email)
-      ].filter(Boolean)
-
+      const assignedEmails = [managerUser?.email, ...assignedTo.map(u => users.find(x => x.username === u)?.email)].filter(Boolean)
       const si_current = STEPS.indexOf(issue.status)
       const si_assigned = STEPS.indexOf('assigned')
       const newLog = [...statusLog]
       for (let i = si_current + 1; i <= si_assigned; i++) {
         const step = STEPS[i]
-        if (!newLog.find(l => l.status === step)) {
+        if (!newLog.find(l => l.status === step))
           newLog.push({ status: step, ts: new Date().toISOString(), by: currentUser.name })
-        }
       }
-
       await patch({
-        status: 'assigned',
-        statusLog: newLog,
-        manager,
-        managerName: managerUser?.name || '',
-        assignedTo,
-        assignedBy: currentUser.name,
-        assignedAt: new Date().toISOString(),
+        status: 'assigned', statusLog: newLog, manager, managerName: managerUser?.name || '',
+        assignedTo, assignedBy: currentUser.name, assignedAt: new Date().toISOString(),
         assignedEmail: assignedEmails.join(','),
-        solution,
-        solutionBy: solution !== issue.solution ? currentUser.name : issue.solutionBy,
+        solution, solutionBy: solution !== issue.solution ? currentUser.name : issue.solutionBy,
         solutionAt: solution !== issue.solution ? new Date().toISOString() : issue.solutionAt,
       })
-
       try {
         await fetch('/api/issues/notify', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            issueId: issue.id,
-            issueTitle: issue.title,
-            issueDescription: issue.description,
-            locationName: issue.locationName,
-            urgency: issue.urgency,
-            assignedBy: currentUser.name,
+            issueId: issue.id, issueTitle: issue.title, issueDescription: issue.description,
+            locationName: issue.locationName, urgency: issue.urgency, assignedBy: currentUser.name,
             emails: assignedEmails,
-            assignedNames: [
-              managerUser?.name,
-              ...assignedTo.map(u => users.find(x => x.username === u)?.name)
-            ].filter(Boolean),
+            assignedNames: [managerUser?.name, ...assignedTo.map(u => users.find(x => x.username === u)?.name)].filter(Boolean),
           }),
         })
         onToast('Assigned & notifications sent')
-      } catch {
-        onToast('Assigned — notifications failed')
-      }
-    } catch (e) {
-      console.error('assignAndNotify error:', e)
-      onToast('Assignment failed — check console')
-    }
+      } catch { onToast('Assigned — notifications failed') }
+    } catch (e) { console.error('assignAndNotify error:', e); onToast('Assignment failed — check console') }
     setAssigning(false)
   }
 
@@ -376,8 +316,7 @@ export default function IssueDetail({ issue, users, currentUser, locations, perm
     const newLog = statusLog.filter(l => l.status !== 'archived')
     newLog.push({ status: 'archived', ts: new Date().toISOString(), by: currentUser.name })
     await patch({ status: 'archived', statusLog: newLog })
-    onToast('Archived')
-    onBack()
+    onToast('Archived'); onBack()
   }
 
   const knownLocationNames = (locations || []).map(l => l.name)
@@ -385,8 +324,7 @@ export default function IssueDetail({ issue, users, currentUser, locations, perm
   let gymLocation = '', areaEquipment = ''
   if (rawLocationName.includes(' — ')) {
     const parts = rawLocationName.split(' — ')
-    gymLocation = parts[0] || ''
-    areaEquipment = parts[1] || ''
+    gymLocation = parts[0] || ''; areaEquipment = parts[1] || ''
   } else if (knownLocationNames.includes(rawLocationName)) {
     gymLocation = rawLocationName
   } else {
@@ -412,14 +350,13 @@ export default function IssueDetail({ issue, users, currentUser, locations, perm
         </div>
         {issue.description && <p className={styles.desc}>{issue.description}</p>}
 
-        {/* Row 1 (desktop): "By..." chip + location pill inline
-            Row 1+2 (mobile): stacked */}
+        {/* Row 1: "By..." + location pill (desktop inline, mobile stacked) */}
         <div className={styles.chipsRow}>
           <span className={styles.chip}>
             By {issue.submittedByName || issue.submittedBy}{areaEquipment ? ` · ${areaEquipment}` : ''} · {fmtDate(issue.createdAt)} at {fmtTime(issue.createdAt)}
           </span>
           {locations && locations.length > 0 && (
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
               <LocationPill name={gymLocation} />
               <span className={styles.changeUrgency}>
                 change
@@ -432,17 +369,14 @@ export default function IssueDetail({ issue, users, currentUser, locations, perm
           )}
         </div>
 
-        {/* Row 2 (desktop): "Reported by..." chip + urgency tag inline
-            Row 3+4 (mobile): stacked */}
+        {/* Row 2: "Reported by..." + urgency (desktop inline, mobile stacked) */}
         <div className={styles.chipsRow} style={{ marginBottom: '1rem' }}>
           {issue.reportedVia ? (
             <span className={styles.chip}>
               Reported by {issue.reportedVia}{issue.reportedByName ? `: ${issue.reportedByName}` : ''}
             </span>
-          ) : (
-            <span /> /* spacer so urgency still aligns right when no reportedVia */
-          )}
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+          ) : <span />}
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
             <span className={`${styles.urgencyTag} ${styles['u_' + urgency]}`}>{urgency} urgency</span>
             <span className={styles.changeUrgency}>
               change
@@ -479,11 +413,7 @@ export default function IssueDetail({ issue, users, currentUser, locations, perm
             const solvedTs = solvedLog ? new Date(solvedLog.ts) : null
             const readyToArchive = issue.status === 'solved' && solvedTs && (Date.now() - solvedTs) > 7 * 24 * 60 * 60 * 1000
             return readyToArchive ? (
-              <span style={{
-                fontSize: 11, fontWeight: 600, color: '#7A4F00',
-                background: '#FFF3CD', border: '0.5px solid #F0C040',
-                borderRadius: 20, padding: '2px 10px', marginBottom: 4,
-              }}>
+              <span style={{ fontSize: 11, fontWeight: 600, color: '#7A4F00', background: '#FFF3CD', border: '0.5px solid #F0C040', borderRadius: 20, padding: '2px 10px', marginBottom: 4 }}>
                 ✓ Solved 7+ days ago — time to archive
               </span>
             ) : null
@@ -502,13 +432,9 @@ export default function IssueDetail({ issue, users, currentUser, locations, perm
                 <span style={{ fontSize: 11, fontWeight: 700, opacity: 0.95 }}>All fixed?</span>
                 <div style={{ display: 'flex', gap: 5, justifyContent: 'center' }}>
                   <button className={styles.confirmBtn} onClick={() => { setConfirmSolveTrack(false); doAdvance('solved') }}
-                    style={{ background: '#2E7D32', color: 'white', padding: '5px 10px', border: 'none' }}>
-                    Yes ✓
-                  </button>
+                    style={{ background: '#2E7D32', color: 'white', padding: '5px 10px', border: 'none' }}>Yes ✓</button>
                   <button className={styles.confirmBtn} onClick={() => setConfirmSolveTrack(false)}
-                    style={{ background: 'rgba(255,255,255,0.25)', color: 'white', padding: '5px 10px', border: 'none' }}>
-                    Not yet
-                  </button>
+                    style={{ background: 'rgba(255,255,255,0.25)', color: 'white', padding: '5px 10px', border: 'none' }}>Not yet</button>
                 </div>
               </div>
             )
@@ -518,13 +444,9 @@ export default function IssueDetail({ issue, users, currentUser, locations, perm
                 <span style={{ fontSize: 11, fontWeight: 700, lineHeight: 1.3, textAlign: 'center' }}>Archive without solving first?</span>
                 <div style={{ display: 'flex', gap: 5, justifyContent: 'center' }}>
                   <button onClick={() => { setConfirmArchive(false); doAdvance('archived') }}
-                    style={{ background: '#333', color: 'white', padding: '5px 0', border: 'none', borderRadius: 5, cursor: 'pointer', fontWeight: 700, fontSize: 12, width: 44, textAlign: 'center', display: 'block' }}>
-                    Yes
-                  </button>
+                    style={{ background: '#333', color: 'white', padding: '5px 0', border: 'none', borderRadius: 5, cursor: 'pointer', fontWeight: 700, fontSize: 12, width: 44, textAlign: 'center', display: 'block' }}>Yes</button>
                   <button onClick={() => setConfirmArchive(false)}
-                    style={{ background: 'rgba(255,255,255,0.2)', color: 'white', padding: '5px 0', border: 'none', borderRadius: 5, cursor: 'pointer', fontWeight: 600, fontSize: 12, width: 44, textAlign: 'center', display: 'block' }}>
-                    No
-                  </button>
+                    style={{ background: 'rgba(255,255,255,0.2)', color: 'white', padding: '5px 0', border: 'none', borderRadius: 5, cursor: 'pointer', fontWeight: 600, fontSize: 12, width: 44, textAlign: 'center', display: 'block' }}>No</button>
                 </div>
               </div>
             )
@@ -534,17 +456,11 @@ export default function IssueDetail({ issue, users, currentUser, locations, perm
                 <span style={{ fontSize: 10, fontWeight: 700, lineHeight: 1.3, textAlign: 'center' }}>Reopen this issue?</span>
                 <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
                   <button className={styles.confirmBtn} onClick={async () => {
-                    const target = confirmReopen
-                    setConfirmReopen(null)
-                    await doRewind(target)
-                    onToast('Issue reopened')
-                  }} style={{ background: '#E85D26', color: 'white' }}>
-                    Yes, reopen
-                  </button>
+                    const target = confirmReopen; setConfirmReopen(null)
+                    await doRewind(target); onToast('Issue reopened')
+                  }} style={{ background: '#E85D26', color: 'white' }}>Yes, reopen</button>
                   <button className={styles.confirmBtn} onClick={() => setConfirmReopen(null)}
-                    style={{ background: 'rgba(255,255,255,0.2)', color: 'white' }}>
-                    No
-                  </button>
+                    style={{ background: 'rgba(255,255,255,0.2)', color: 'white' }}>No</button>
                 </div>
               </div>
             )
@@ -566,11 +482,10 @@ export default function IssueDetail({ issue, users, currentUser, locations, perm
             <span className={styles.phaseTitle}>Identify</span>
           </div>
 
-          {/* Who's looking into this */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16, flexWrap: 'wrap' }}>
             <div className="section-label" style={{ marginTop: 0, marginBottom: 0, whiteSpace: 'nowrap' }}>Who&apos;s looking into this?</div>
             <select value={investigating} onChange={e => saveInvestigating(e.target.value)} style={{ marginBottom: 0, width: 'auto', minWidth: 140, maxWidth: 200 }}>
-              <option value="">Unassigned</option>
+              <option value="">Select manager...</option>
               {managerUsers.map(u => <option key={u.id} value={u.username}>{u.name}</option>)}
             </select>
             {issue.investigatingBy && (
@@ -578,7 +493,6 @@ export default function IssueDetail({ issue, users, currentUser, locations, perm
             )}
           </div>
 
-          {/* What's the actual problem — full-width header, buttons below textarea */}
           <div className={styles.identifyHeader}>
             <div className="section-label" style={{ marginTop: 0, marginBottom: 0 }}>What&apos;s the actual problem?</div>
           </div>
@@ -588,28 +502,18 @@ export default function IssueDetail({ issue, users, currentUser, locations, perm
             value={realIssue}
             onChange={e => setRealIssue(e.target.value)}
             style={{
-              marginBottom: 4,
-              transition: 'border-color 0.2s, box-shadow 0.2s',
-              ...(highlightRealIssue ? {
-                borderColor: '#C62828',
-                boxShadow: '0 0 0 3px rgba(198,40,40,0.15)',
-              } : {})
+              marginBottom: 4, transition: 'border-color 0.2s, box-shadow 0.2s',
+              ...(highlightRealIssue ? { borderColor: '#C62828', boxShadow: '0 0 0 3px rgba(198,40,40,0.15)' } : {})
             }}
           />
           {issue.realIssueBy && (
             <div className={styles.fieldMeta} style={{ marginBottom: 8 }}>{`Last edited by ${issue.realIssueBy} · ${fmtDateTime(issue.realIssueAt)}`}</div>
           )}
           <div className={styles.identifyActions}>
-            <button onClick={async () => { await patch({ realIssue, realIssueBy: currentUser.name, realIssueAt: new Date().toISOString() }); onToast('Saved') }}>
-              Save
-            </button>
+            <button onClick={async () => { await patch({ realIssue, realIssueBy: currentUser.name, realIssueAt: new Date().toISOString() }); onToast('Saved') }}>Save</button>
             {issue.status === 'submitted' && (
-              <button
-                className="btn-primary"
-                onClick={() => markStatus('identified')}
-                disabled={!realIssue.trim()}
-                title={!realIssue.trim() ? 'Fill in the real issue first' : ''}
-              >
+              <button className="btn-primary" onClick={() => markStatus('identified')}
+                disabled={!realIssue.trim()} title={!realIssue.trim() ? 'Fill in the real issue first' : ''}>
                 Mark identified →
               </button>
             )}
@@ -623,7 +527,6 @@ export default function IssueDetail({ issue, users, currentUser, locations, perm
             <span className={styles.phaseTitle}>Discuss · Define · Assign</span>
           </div>
 
-          {/* Discuss */}
           <div className="section-label" style={{ marginTop: 0 }}>Discuss</div>
           <div className={styles.notes}>
             {issue.notes.length ? issue.notes.map((n, i) => (
@@ -641,45 +544,35 @@ export default function IssueDetail({ issue, users, currentUser, locations, perm
 
           <div style={{ borderTop: '0.5px solid var(--border)', margin: '1rem 0' }} />
 
-          {/* Define */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 6 }}>
             <div className="section-label" style={{ marginTop: 0, marginBottom: 0 }}>Define the fix</div>
             <button onClick={async () => { await patch({ solution, solutionBy: currentUser.name, solutionAt: new Date().toISOString() }); onToast('Saved') }}
               style={{ flexShrink: 0 }}>Save</button>
           </div>
-          <textarea
-            placeholder="What specifically are we doing, and by when?"
-            value={solution}
-            onChange={e => setSolution(e.target.value)}
-            style={{ flex: 1, minHeight: 80, marginBottom: 0, width: '100%' }}
-          />
+          <textarea placeholder="What specifically are we doing, and by when?" value={solution}
+            onChange={e => setSolution(e.target.value)} style={{ flex: 1, minHeight: 80, marginBottom: 0, width: '100%' }} />
           {issue.solutionBy && (
             <div className={styles.fieldMeta} style={{ marginTop: 4 }}>Last edited by {issue.solutionBy} · {fmtDateTime(issue.solutionAt)}</div>
           )}
 
           <div style={{ borderTop: '0.5px solid var(--border)', margin: '1rem 0' }} />
 
-          {/* Assign */}
           <div ref={assignSectionRef} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 6 }}>
             <div className="section-label" style={{ marginTop: 0, marginBottom: 0 }}>Assign</div>
             <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
               {!isSolvedOrArchived && (
-                <button
-                  className="btn-primary"
-                  onClick={assignAndNotify}
-                  disabled={assigning}
-                >{assigning ? 'Assigning...' : 'Assign & notify →'}</button>
+                <button className="btn-primary" onClick={assignAndNotify} disabled={assigning}>
+                  {assigning ? 'Assigning...' : 'Assign & notify →'}
+                </button>
               )}
-              {issue.status === 'solved' && (
-                <button onClick={archiveIssue}>Archive →</button>
-              )}
+              {issue.status === 'solved' && <button onClick={archiveIssue}>Archive →</button>}
             </div>
           </div>
           <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
             <div style={{ flex: 1, minWidth: 160 }}>
               <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginBottom: 4 }}>Manager responsible</div>
               <select value={manager} onChange={e => saveManager(e.target.value)} style={{ marginBottom: 0 }}>
-                <option value="">Select manager…</option>
+                <option value="">Unassigned</option>
                 {managerUsers.map(u => <option key={u.id} value={u.username}>{u.name}</option>)}
               </select>
             </div>
@@ -688,9 +581,7 @@ export default function IssueDetail({ issue, users, currentUser, locations, perm
               <MultiSelectUsers value={assignedTo} onChange={saveAssignedTo} users={users} />
             </div>
           </div>
-          {assignError && (
-            <div style={{ color: '#C62828', fontSize: 13, marginTop: 8 }}>{assignError}</div>
-          )}
+          {assignError && <div style={{ color: '#C62828', fontSize: 13, marginTop: 8 }}>{assignError}</div>}
           {issue.assignedAt && (
             <div className={styles.fieldMeta} style={{ marginTop: 6 }}>Last assigned by {issue.assignedBy} · {fmtDateTime(issue.assignedAt)}</div>
           )}
@@ -700,33 +591,31 @@ export default function IssueDetail({ issue, users, currentUser, locations, perm
 
       {/* ── Float bar ── */}
       <div className={styles.floatBar}>
-        <button onClick={onBack}>← Back</button>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          {!isSolvedOrArchived && (
-            confirmSolve ? (
-              <>
-                <span style={{ fontSize: 13, color: 'var(--text-secondary)', alignSelf: 'center' }}>All fixed?</span>
+        <div className={styles.floatBarInner}>
+          <button onClick={onBack}>← Back</button>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            {!isSolvedOrArchived && (
+              confirmSolve ? (
+                <>
+                  <span style={{ fontSize: 13, color: 'var(--text-secondary)', alignSelf: 'center' }}>All fixed?</span>
+                  <button style={{ background: '#2E7D32', borderColor: '#1B5E20', color: 'white' }}
+                    onClick={() => { setConfirmSolve(false); doAdvance('solved') }}>Yes, solved ✓</button>
+                  <button onClick={() => setConfirmSolve(false)}>Cancel</button>
+                </>
+              ) : (
                 <button style={{ background: '#2E7D32', borderColor: '#1B5E20', color: 'white' }}
-                  onClick={() => { setConfirmSolve(false); doAdvance('solved') }}>
-                  Yes, solved ✓
-                </button>
-                <button onClick={() => setConfirmSolve(false)}>Cancel</button>
-              </>
-            ) : (
-              <button style={{ background: '#2E7D32', borderColor: '#1B5E20', color: 'white' }}
-                onClick={() => setConfirmSolve(true)}>
-                Mark solved ✓
+                  onClick={() => setConfirmSolve(true)}>Mark solved ✓</button>
+              )
+            )}
+            {issue.status === 'solved' && (
+              <button onClick={() => advanceStatus('archived')}>Archive →</button>
+            )}
+            {!confirmSolve && (
+              <button className={`btn-primary ${styles.saveBtn}`} onClick={saveAll} disabled={saving}>
+                {saving ? 'Saving...' : 'Save changes'}
               </button>
-            )
-          )}
-          {issue.status === 'solved' && (
-            <button onClick={() => advanceStatus('archived')}>Archive →</button>
-          )}
-          {!confirmSolve && (
-            <button className={`btn-primary ${styles.saveBtn}`} onClick={saveAll} disabled={saving}>
-              {saving ? 'Saving...' : 'Save changes'}
-            </button>
-          )}
+            )}
+          </div>
         </div>
       </div>
     </div>

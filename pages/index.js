@@ -61,30 +61,20 @@ export default function Home() {
     } catch {
       user = { ...user, locationRoles: [] }
     }
-
     setCurrentUser(user)
-
     if (user.isAdmin || user.isGlobalAdmin) {
-      setActiveLocationId('all')
-      setTab('home')
+      setActiveLocationId('all'); setTab('home')
     } else if (user.locationRoles?.length > 0) {
       setActiveLocationId(user.locationRoles[0].locationId)
-      const firstRole = user.locationRoles[0].role
-      setTab(firstRole === 'manager' ? 'home' : 'submit')
+      setTab(user.locationRoles[0].role === 'manager' ? 'home' : 'submit')
     } else {
-      setActiveLocationId('all')
-      setTab('submit')
+      setActiveLocationId('all'); setTab('submit')
     }
   }
 
   function handleLogout() {
-    setCurrentUser(null)
-    setUsers([])
-    setIssues([])
-    setLocations([])
-    setSelectedIssueId(null)
-    setTab('home')
-    setActiveLocationId('all')
+    setCurrentUser(null); setUsers([]); setIssues([]); setLocations([])
+    setSelectedIssueId(null); setTab('home'); setActiveLocationId('all')
   }
 
   function handleIssueUpdate(updated) {
@@ -92,23 +82,18 @@ export default function Home() {
   }
 
   function switchTab(t) {
-    setTab(t)
-    setSelectedIssueId(null)
-    setIssueListViewMode('list')
+    setTab(t); setSelectedIssueId(null); setIssueListViewMode('list')
   }
 
   function switchTabSorted(t, sort, filter, viewMode) {
-    setTab(t)
-    setSelectedIssueId(null)
+    setTab(t); setSelectedIssueId(null)
     if (sort) setIssueListSort(sort)
     if (filter !== undefined) setIssueListFilter(filter)
-    if (viewMode) setIssueListViewMode(viewMode)
-    else setIssueListViewMode('list')
+    setIssueListViewMode(viewMode || 'list')
   }
 
   async function handleLocationChange(locId) {
-    setActiveLocationId(locId)
-    setSelectedIssueId(null)
+    setActiveLocationId(locId); setSelectedIssueId(null)
     await loadData(locId)
   }
 
@@ -117,60 +102,64 @@ export default function Home() {
   const isGlobalAdmin = currentUser.isAdmin || currentUser.isGlobalAdmin
   const activeLocation = locations.find(l => l.id === activeLocationId)
   const perms = getPermissionsForLocation(currentUser, activeLocationId)
-
   const accessibleLocationIds = getUserAccessibleLocationIds(currentUser)
   const accessibleLocations = accessibleLocationIds === null
     ? locations
     : locations.filter(l => accessibleLocationIds.includes(l.id))
-
   const canSwitchLocations = isGlobalAdmin || accessibleLocations.length > 1
-  const isManagerAnywhere = isGlobalAdmin || (currentUser.locationRoles || []).some(r => r.role === 'manager')
   const isManagerHere = isGlobalAdmin || perms.role === 'manager' || perms.role === 'admin'
-
   const mySubmittedIssues = issues.filter(i => i.submittedBy === currentUser.username)
   const selectedIssue = issues.find(i => i.id === selectedIssueId)
-
   const activeCount = issues.filter(i => i.status !== 'archived').length
+
+  const locationEl = canSwitchLocations ? (
+    <select className={styles.locationSelect} value={activeLocationId} onChange={e => handleLocationChange(e.target.value)}>
+      {isGlobalAdmin && <option value="all">ALL LOCATIONS</option>}
+      {accessibleLocations.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
+    </select>
+  ) : activeLocation ? (
+    <span className={styles.locationBadge}>{activeLocation.name}</span>
+  ) : null
+
+  const signOutEl = (
+    <button onClick={handleLogout} style={{ fontSize: 13, padding: '5px 12px', flexShrink: 0 }}>Sign out</button>
+  )
 
   return (
     <div className={styles.app}>
       <nav className={styles.nav}>
         <div className={styles.navInner}>
+
+          {/* Row 1 left: brand */}
           <div className={styles.navBrand}>
             <div className={styles.navLogo}><span>BL</span></div>
             <span className={styles.navTitle}>Issues Tracker</span>
           </div>
+
+          {/* Row 1 right (desktop): location + user info + sign out
+              Row 1 right (mobile): just the role badge — rest moves to navRow2 */}
           <div className={styles.navRight}>
-            {/* Location first in DOM = left of sign out on desktop.
-                On mobile, CSS order moves it below via order: 2 */}
-            {canSwitchLocations && (
-              <select
-                className={styles.locationSelect}
-                value={activeLocationId}
-                onChange={e => handleLocationChange(e.target.value)}
-              >
-                {isGlobalAdmin && (
-                  <option value="all">ALL LOCATIONS</option>
-                )}
-                {accessibleLocations.map(l => (
-                  <option key={l.id} value={l.id}>{l.name}</option>
-                ))}
-              </select>
-            )}
-            {!canSwitchLocations && activeLocation && (
-              <span className={styles.locationBadge}>{activeLocation.name}</span>
-            )}
-            {/* navActions second in DOM = right of location on desktop.
-                On mobile, CSS order: 1 keeps it on the top row */}
+            {/* Desktop only: location inline */}
+            <span className={styles.navLocationDesktop}>
+              {locationEl}
+            </span>
             <div className={styles.navActions}>
               <span className={styles.navUser}>{currentUser.name}</span>
               {isGlobalAdmin && <span className="admin-tag">admin</span>}
               {!isGlobalAdmin && perms.role === 'manager' && (
                 <span className="admin-tag" style={{ background: 'var(--blue, #1565C0)' }}>manager</span>
               )}
-              <button onClick={handleLogout} style={{ fontSize: 13, padding: '5px 12px' }}>Sign out</button>
+              {/* Desktop sign out */}
+              <span className={styles.navSignOutDesktop}>{signOutEl}</span>
             </div>
           </div>
+
+          {/* Row 2 (mobile only): location (flex) + sign out (right) */}
+          <div className={styles.navRow2}>
+            {locationEl}
+            {signOutEl}
+          </div>
+
         </div>
       </nav>
 
@@ -209,9 +198,7 @@ export default function Home() {
             <button className={`${styles.tab} ${tab === 'submit' ? styles.tabActive : ''}`} onClick={() => switchTab('submit')}>Submit issue</button>
             <button className={`${styles.tab} ${tab === 'my' ? styles.tabActive : ''}`} onClick={() => switchTab('my')}>
               My issues
-              {mySubmittedIssues.length > 0 && (
-                <span className={styles.count}>{mySubmittedIssues.length}</span>
-              )}
+              {mySubmittedIssues.length > 0 && <span className={styles.count}>{mySubmittedIssues.length}</span>}
             </button>
           </div>
         )}
@@ -222,50 +209,26 @@ export default function Home() {
           {loading && <div className={styles.loading}>Loading...</div>}
 
           {!loading && tab === 'home' && isManagerHere && (
-            <Dashboard
-              issues={issues}
-              currentUser={currentUser}
-              activeLocation={activeLocation}
-              onNavigate={switchTabSorted}
-              onSelectIssue={(id) => { setSelectedIssueId(id); setTab('issues') }}
-            />
+            <Dashboard issues={issues} currentUser={currentUser} activeLocation={activeLocation}
+              onNavigate={switchTabSorted} onSelectIssue={(id) => { setSelectedIssueId(id); setTab('issues') }} />
           )}
 
           {!loading && tab === 'submit' && (
-            <SubmitIssue
-              currentUser={currentUser}
-              locations={accessibleLocations}
+            <SubmitIssue currentUser={currentUser} locations={accessibleLocations}
               activeLocationId={activeLocationId === 'all' ? null : activeLocationId}
-              activeLocationName={activeLocation?.name || ''}
-              onToast={showToast}
-              onSubmitted={() => loadData(activeLocationId)}
-            />
+              activeLocationName={activeLocation?.name || ''} onToast={showToast}
+              onSubmitted={() => loadData(activeLocationId)} />
           )}
 
           {!loading && tab === 'issues' && isManagerHere && (
             selectedIssue ? (
-              <IssueDetail
-                issue={selectedIssue}
-                users={users}
-                currentUser={currentUser}
-                locations={locations}
-                permissions={perms}
-                onBack={() => setSelectedIssueId(null)}
-                onUpdate={handleIssueUpdate}
-                onToast={showToast}
-              />
+              <IssueDetail issue={selectedIssue} users={users} currentUser={currentUser}
+                locations={locations} permissions={perms} onBack={() => setSelectedIssueId(null)}
+                onUpdate={handleIssueUpdate} onToast={showToast} />
             ) : (
-              <IssueList
-                issues={issues}
-                locations={locations}
-                onSelect={setSelectedIssueId}
-                isAdmin={true}
-                initialSort={issueListSort}
-                initialFilter={issueListFilter}
-                initialViewMode={issueListViewMode}
-                currentUser={currentUser}
-                users={users}
-              />
+              <IssueList issues={issues} locations={locations} onSelect={setSelectedIssueId}
+                isAdmin={true} initialSort={issueListSort} initialFilter={issueListFilter}
+                initialViewMode={issueListViewMode} currentUser={currentUser} users={users} />
             )
           )}
 
@@ -274,16 +237,9 @@ export default function Home() {
           )}
 
           {!loading && tab === 'settings' && isManagerHere && (
-            <Settings
-              users={users}
-              locations={locations}
-              activeLocationId={activeLocationId}
-              currentUser={currentUser}
-              isGlobalAdmin={isGlobalAdmin}
-              onUsersChange={setUsers}
-              onLocationsChange={setLocations}
-              onToast={showToast}
-            />
+            <Settings users={users} locations={locations} activeLocationId={activeLocationId}
+              currentUser={currentUser} isGlobalAdmin={isGlobalAdmin}
+              onUsersChange={setUsers} onLocationsChange={setLocations} onToast={showToast} />
           )}
         </div>
       </div>

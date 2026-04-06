@@ -20,7 +20,6 @@
 }
 
 .title { font-size: 20px; font-weight: 600; color: var(--text); }
-
 .desc { font-size: 14px; color: var(--text-secondary); line-height: 1.6; margin-bottom: 1rem; }
 
 .chips {
@@ -31,12 +30,12 @@
   margin-bottom: 0.5rem;
 }
 
-/* Desktop: two rows where each row has text + tag inline.
-   Mobile: each item stacks to its own line. */
+/* Desktop: single row, text left + tag right. Mobile: stacks to column. */
 .chipsRow {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
+  justify-content: space-between;
   gap: 8px;
   margin-bottom: 0.5rem;
 }
@@ -47,6 +46,9 @@
   background: var(--bg);
   padding: 4px 10px;
   border-radius: 20px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .urgencyTag {
@@ -70,6 +72,7 @@
   display: inline-flex;
   align-items: center;
   vertical-align: middle;
+  white-space: nowrap;
 }
 .changeUrgency:hover { color: #0C447C; }
 
@@ -169,18 +172,11 @@
   letter-spacing: 0.01em;
 }
 
-.identifyRow {
-  display: flex;
-  gap: 20px;
-  align-items: flex-start;
-}
+.identifyRow { display: flex; gap: 20px; align-items: flex-start; }
 .identifyLeft { flex: 1; min-width: 0; }
 .identifyRight { width: 200px; flex-shrink: 0; }
 
-.identifyHeader {
-  display: block;
-  margin-bottom: 8px;
-}
+.identifyHeader { display: block; margin-bottom: 8px; }
 
 .identifyActions {
   display: flex;
@@ -198,37 +194,50 @@
 .noteMeta { font-size: 11px; color: var(--text-tertiary); margin-top: 3px; }
 .noNotes { font-size: 13px; color: var(--text-tertiary); margin-bottom: 10px; }
 
+/* Float bar: full-width fixed bar, content constrained to 720px */
 .floatBar {
   position: fixed;
   bottom: 0;
   left: 0;
   right: 0;
   box-sizing: border-box;
-  width: 100%;
   background: var(--surface);
   border-top: 0.5px solid var(--border-strong);
-  padding: 10px 24px;
+  z-index: 50;
+  display: flex;
+  justify-content: center;
+}
+
+.floatBarInner {
+  width: 100%;
+  max-width: 720px;
+  padding: 10px 16px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  z-index: 50;
 }
 
-.floatBar button {
+.floatBarInner button {
   width: auto !important;
   flex-shrink: 0;
 }
 
 /* ── Mobile ── */
 @media (max-width: 600px) {
-
-  /* On mobile, each chipsRow becomes a column so location and urgency
-     each get their own line, separate from the text chip above them */
+  /* Each chipsRow stacks vertically on mobile */
   .chipsRow {
     flex-direction: column;
     align-items: flex-start;
+    flex-wrap: wrap;
+    justify-content: flex-start;
     gap: 6px;
+  }
+
+  .chip {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
   }
 
   .track {
@@ -249,38 +258,25 @@
     text-align: left;
   }
 
-  .step:first-child {
-    border-radius: var(--radius) var(--radius) 0 0;
-  }
-
-  .step:last-child {
-    border-radius: 0 0 var(--radius) var(--radius);
-    border-bottom: none;
-  }
+  .step:first-child { border-radius: var(--radius) var(--radius) 0 0; }
+  .step:last-child { border-radius: 0 0 var(--radius) var(--radius); border-bottom: none; }
 
   .stepLabel { font-size: 13px; }
   .stepTs { font-size: 11px; text-align: right; }
 
-  .phaseBlock {
-    padding: 14px 14px 18px;
-  }
+  .phaseBlock { padding: 14px 14px 18px; }
 
-  .identifyActions {
-    width: 100%;
-  }
+  .identifyActions { width: 100%; }
+  .identifyActions button { flex: 1; }
 
-  .identifyActions button {
-    flex: 1;
-  }
-
-  .floatBar {
+  .floatBarInner {
     padding: 10px 14px;
     gap: 8px;
     flex-wrap: wrap;
     justify-content: space-between;
   }
 
-  .floatBar button {
+  .floatBarInner button {
     font-size: 12px !important;
     padding: 6px 12px !important;
     flex-shrink: 1;
