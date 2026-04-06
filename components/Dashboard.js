@@ -90,8 +90,12 @@ export default function Dashboard({ issues, currentUser, activeLocation, onNavig
 
   const active = issues.filter(i => i.status !== 'archived')
   const open = active.filter(i => i.status !== 'solved')
-  const unassigned = open.filter(i => !i.assignedTo || (Array.isArray(i.assignedTo) ? i.assignedTo.length === 0 : !String(i.assignedTo).trim()))
   const highUrgency = open.filter(i => i.urgency === 'high')
+
+  // Unassigned: identified but no manager yet
+  const unassigned = issues.filter(i =>
+    i.status === 'identified' && (!i.manager || !String(i.manager).trim())
+  )
 
   const getSolvedTs = (issue) => {
     const log = issue.statusLog?.find(l => l.status === 'solved')
@@ -143,9 +147,9 @@ export default function Dashboard({ issues, currentUser, activeLocation, onNavig
           <div className={styles.statNumber}>{highUrgency.length}</div>
           <div className={styles.statLabel}>High urgency</div>
         </div>
-        <div className={`${styles.stat} ${styles.statAmber}`} onClick={() => onNavigate('owner')}>
+        <div className={`${styles.stat} ${styles.statAmber}`} onClick={() => onNavigate('issues', 'newest', null, 'bymanager')}>
           <div className={styles.statNumber}>{unassigned.length}</div>
-          <div className={styles.statLabel}>Unassigned</div>
+          <div className={styles.statLabel}>Needs manager</div>
         </div>
         <div className={`${styles.stat} ${styles.statGreen}`} onClick={() => onNavigate('issues', 'status_resolved', null)}>
           <div className={styles.statNumber}>{resolvedThisWeek.length}</div>

@@ -88,11 +88,11 @@ function sortIssues(issues) {
   return [...issues].sort((a, b) => STATUS_ORDER[a.status] - STATUS_ORDER[b.status])
 }
 
-export default function IssueList({ issues, locations, onSelect, isAdmin, initialSort, initialFilter, currentUser, users }) {
+export default function IssueList({ issues, locations, onSelect, isAdmin, initialSort, initialFilter, initialViewMode, currentUser, users }) {
   const [search, setSearch] = useState('')
   const [sortBy, setSortBy] = useState(initialSort || 'newest')
   const [showArchived, setShowArchived] = useState(false)
-  const [viewMode, setViewMode] = useState('list') // 'list' | 'bymanager'
+  const [viewMode, setViewMode] = useState(initialViewMode || 'list')
 
   const archivedCount = issues.filter(i => i.status === 'archived').length
 

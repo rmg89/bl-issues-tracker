@@ -17,11 +17,12 @@ export default function Home() {
   const [users, setUsers] = useState([])
   const [issues, setIssues] = useState([])
   const [locations, setLocations] = useState([])
-  const [activeLocationId, setActiveLocationId] = useState('all') // 'all' | locationId
+  const [activeLocationId, setActiveLocationId] = useState('all')
   const [tab, setTab] = useState('home')
   const [selectedIssueId, setSelectedIssueId] = useState(null)
   const [issueListSort, setIssueListSort] = useState('newest')
   const [issueListFilter, setIssueListFilter] = useState(null)
+  const [issueListViewMode, setIssueListViewMode] = useState('list')
   const [loading, setLoading] = useState(false)
   const [toast, setToast] = useState('')
   const [toastVisible, setToastVisible] = useState(false)
@@ -53,7 +54,6 @@ export default function Home() {
   }, [currentUser, loadData])
 
   async function handleLogin(user) {
-    // Fetch location roles for the logged-in user
     try {
       const rolesRes = await fetch(`/api/location-roles?userId=${user.id}`)
       const roles = await rolesRes.json()
@@ -64,7 +64,6 @@ export default function Home() {
 
     setCurrentUser(user)
 
-    // Set default active location
     if (user.isAdmin || user.isGlobalAdmin) {
       setActiveLocationId('all')
       setTab('home')
@@ -95,13 +94,16 @@ export default function Home() {
   function switchTab(t) {
     setTab(t)
     setSelectedIssueId(null)
+    setIssueListViewMode('list')
   }
 
-  function switchTabSorted(t, sort, filter) {
+  function switchTabSorted(t, sort, filter, viewMode) {
     setTab(t)
     setSelectedIssueId(null)
     if (sort) setIssueListSort(sort)
     if (filter !== undefined) setIssueListFilter(filter)
+    if (viewMode) setIssueListViewMode(viewMode)
+    else setIssueListViewMode('list')
   }
 
   async function handleLocationChange(locId) {
@@ -112,21 +114,16 @@ export default function Home() {
 
   if (!currentUser) return <Login onLogin={handleLogin} />
 
-  // --- Compute permissions for the active location ---
   const isGlobalAdmin = currentUser.isAdmin || currentUser.isGlobalAdmin
   const activeLocation = locations.find(l => l.id === activeLocationId)
   const perms = getPermissionsForLocation(currentUser, activeLocationId)
 
-  // Build list of locations this user can access
-  const accessibleLocationIds = getUserAccessibleLocationIds(currentUser) // null = all
+  const accessibleLocationIds = getUserAccessibleLocationIds(currentUser)
   const accessibleLocations = accessibleLocationIds === null
     ? locations
     : locations.filter(l => accessibleLocationIds.includes(l.id))
 
-  // Can this user see the location switcher?
   const canSwitchLocations = isGlobalAdmin || accessibleLocations.length > 1
-
-  // Determine if user has any manager/admin access (for showing manager-level tabs)
   const isManagerAnywhere = isGlobalAdmin || (currentUser.locationRoles || []).some(r => r.role === 'manager')
   const isManagerHere = isGlobalAdmin || perms.role === 'manager' || perms.role === 'admin'
 
@@ -259,6 +256,7 @@ export default function Home() {
                 isAdmin={true}
                 initialSort={issueListSort}
                 initialFilter={issueListFilter}
+                initialViewMode={issueListViewMode}
                 currentUser={currentUser}
                 users={users}
               />
