@@ -22,6 +22,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
+  flex-shrink: 0;
 }
 
 .navLogo {
@@ -32,6 +33,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
 }
 
 .navLogo span {
@@ -50,21 +52,19 @@
   display: flex;
   align-items: center;
   gap: 10px;
+  min-width: 0;
 }
 
 .navUser {
   font-size: 13px;
   color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 120px;
 }
 
-.body {
-  flex: 1;
-  max-width: 720px;
-  width: 100%;
-  margin: 0 auto;
-  padding: 0 16px 3rem;
-}
-
+/* ── Tabs ── */
 .tabs {
   border-bottom: 0.5px solid var(--border);
   margin-bottom: 1.5rem;
@@ -81,6 +81,11 @@
   max-width: 720px;
   margin: 0 auto;
   padding: 0;
+}
+
+.tabCol {
+  display: flex;
+  justify-content: center;
 }
 
 .tabLeft {
@@ -128,6 +133,32 @@
   border-bottom-color: var(--bl-orange);
 }
 
+.tabSettings {
+  padding: 14px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-tertiary);
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  margin-bottom: -1px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: color 0.15s;
+  white-space: nowrap;
+  letter-spacing: 0.01em;
+}
+
+.tabSettings:hover { color: var(--text-secondary); background: none; }
+
+.tabSettingsActive {
+  color: var(--bl-orange) !important;
+  border-bottom-color: var(--bl-orange);
+}
+
 .count {
   background: var(--bl-orange);
   color: white;
@@ -139,6 +170,19 @@
   text-align: center;
 }
 
+/* Short/full label switching */
+.tabLabelShort { display: none; }
+.tabLabelFull { display: inline; }
+
+/* ── Body ── */
+.body {
+  flex: 1;
+  max-width: 720px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 0 16px 80px;
+}
+
 .content { width: 100%; }
 
 .loading {
@@ -148,78 +192,7 @@
   font-size: 14px;
 }
 
-.body { padding-bottom: 80px; }
-
-@media (max-width: 600px) {
-  .nav {
-    padding: 8px 12px;
-  }
-
-  .navTitle {
-    font-size: 13px;
-  }
-
-  .navRight {
-    gap: 6px;
-  }
-
-  .navRight button {
-    font-size: 12px;
-    padding: 5px 10px;
-  }
-
-  .tabs {
-    gap: 0;
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-    position: sticky;
-    top: 0;
-    z-index: 10;
-    background: var(--surface);
-  }
-
-  .tabs::-webkit-scrollbar {
-    display: none;
-  }
-
-  .tab {
-    padding: 10px 14px;
-    font-size: 12px;
-    white-space: nowrap;
-    flex-shrink: 0;
-  }
-
-  .count {
-    font-size: 10px;
-    padding: 1px 5px;
-  }
-
-  .body {
-    padding: 0 12px 5rem;
-  }
-}
-
-.tabLabelShort { display: none; }
-.tabLabelFull { display: inline; }
-
-@media (max-width: 600px) {
-  .tabLabelShort { display: inline; }
-  .tabLabelFull { display: none; }
-}
-
-@media (max-width: 600px) {
-  .navInner {
-    padding: 8px 12px;
-  }
-
-  .tabsInner {
-    padding: 0;
-    max-width: 100%;
-  }
-}
-
+/* ── Location ── */
 .locationSelect {
   font-size: 13px;
   padding: 5px 10px;
@@ -241,59 +214,99 @@
   padding: 4px 10px;
 }
 
+/* ══════════════════════════════
+   MOBILE
+══════════════════════════════ */
 @media (max-width: 600px) {
-  .locationSelect {
-    max-width: 110px;
-    font-size: 12px;
-    padding: 4px 8px;
+
+  /* Nav: stack into two rows */
+  .navInner {
+    flex-wrap: wrap;
+    padding: 10px 14px;
+    gap: 8px;
   }
-}
 
-.tabSettings {
-  padding: 14px 16px;
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--text-tertiary);
-  background: none;
-  border: none;
-  border-bottom: 2px solid transparent;
-  border-radius: 0;
-  margin-bottom: -1px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  transition: color 0.15s;
-  white-space: nowrap;
-  letter-spacing: 0.01em;
-}
-.tabSettings:hover { color: var(--text-secondary); background: none; }
-.tabSettingsActive {
-  color: var(--bl-orange) !important;
-  border-bottom-color: var(--bl-orange);
-}
+  .navBrand {
+    flex: 1;
+  }
 
-@media (max-width: 600px) {
+  /* Right side: sign out stays on first row, right-aligned */
+  .navRight {
+    flex-shrink: 0;
+    gap: 6px;
+  }
+
+  /* Hide user name on mobile — role badge is enough */
+  .navUser {
+    display: none;
+  }
+
+  .navRight button {
+    font-size: 12px;
+    padding: 5px 10px;
+  }
+
+  /* Location select goes full-width on second row */
+  .locationSelect {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    font-size: 13px;
+    padding: 6px 10px;
+    order: 10; /* push to own row via flex-wrap */
+    flex-basis: 100%;
+  }
+
+  .locationBadge {
+    font-size: 12px;
+    order: 10;
+    flex-basis: 100%;
+    text-align: center;
+  }
+
+  /* Tab bar: simple scrollable flex, no grid */
   .tabsInner {
     display: flex;
     grid-template-columns: none;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
+    max-width: 100%;
+    padding: 0;
   }
+
   .tabsInner::-webkit-scrollbar { display: none; }
-  .tabLeft, .tabCenter, .tabRight {
+
+  /* Dissolve layout divs */
+  .tabCol,
+  .tabLeft,
+  .tabCenter,
+  .tabRight {
     display: contents;
   }
+
+  .tab {
+    padding: 11px 16px;
+    font-size: 13px;
+    flex-shrink: 0;
+  }
+
   .tabSettings {
-    padding: 10px 14px;
-    font-size: 12px;
+    padding: 11px 14px;
+    font-size: 13px;
     flex-shrink: 0;
     margin-left: auto;
   }
-}
 
-.tabCol {
-  display: flex;
-  justify-content: center;
+  .tabLabelShort { display: inline; }
+  .tabLabelFull { display: none; }
+
+  .count {
+    font-size: 10px;
+    padding: 1px 5px;
+  }
+
+  .body {
+    padding: 0 12px 5rem;
+  }
 }
