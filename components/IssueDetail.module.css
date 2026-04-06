@@ -186,12 +186,14 @@
   bottom: 0;
   left: 0;
   right: 0;
+  box-sizing: border-box;
+  width: 100%;
   background: var(--surface);
   border-top: 0.5px solid var(--border-strong);
   padding: 10px 24px;
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: space-between;
   gap: 10px;
   z-index: 50;
 }
@@ -201,13 +203,13 @@
   flex-shrink: 0;
 }
 
-/* ── Mobile track: vertical stacked layout ── */
+/* ── Mobile ── */
 @media (max-width: 600px) {
   .track {
     flex-direction: column;
     height: auto;
     overflow: visible;
-    margin-bottom: 1.25rem; /* prevents overlap with phaseBlock */
+    margin-bottom: 1.25rem;
   }
 
   .step {
@@ -243,8 +245,18 @@
     padding: 14px 14px 18px;
   }
 
+  /* Float bar: full width, wraps if needed */
   .floatBar {
     padding: 10px 14px;
     gap: 8px;
+    flex-wrap: wrap;
+    justify-content: space-between;
+  }
+
+  .floatBar button {
+    font-size: 12px !important;
+    padding: 6px 12px !important;
+    flex-shrink: 1;
+    min-width: 0;
   }
 }
