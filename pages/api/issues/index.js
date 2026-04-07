@@ -86,7 +86,25 @@ export default async function handler(req, res) {
         }
 
         const updatedRecord = await IssuesTable.find(recordId)
-        return res.status(200).json(formatIssue(updatedRecord))
+        const issue = formatIssue(updatedRecord)
+
+        // ── Fire new-issue notification (non-blocking) ──────────────────
+        // Don't await — we don't want email failure to affect the response
+        fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/notifications/new-issue`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            issueId: issue.id,
+            issueTitle: issue.title,
+            issueDescription: issue.description,
+            locationId: issue.locationId,
+            locationName: issue.locationName,
+            urgency: issue.urgency,
+            submittedByName: issue.submittedByName || issue.submittedBy,
+          }),
+        }).catch(e => console.error('New-issue notification fire failed:', e))
+
+        return res.status(200).json(issue)
       } catch (err) {
         console.error('Error:', err)
         return res.status(500).json({ error: err.message })

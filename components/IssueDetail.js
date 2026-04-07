@@ -124,6 +124,10 @@ function fmtTime(str) {
 }
 
 export default function IssueDetail({ issue, users, currentUser, locations, permissions, onBack, onUpdate, onToast }) {
+  const [title, setTitle] = useState(issue.title || '')
+  const [editingTitle, setEditingTitle] = useState(false)
+  const titleInputRef = useRef(null)
+
   const [realIssue, setRealIssue] = useState(issue.realIssue || '')
   const [solution, setSolution] = useState(issue.solution || '')
   const [urgency, setUrgency] = useState(issue.urgency || 'medium')
@@ -143,6 +147,7 @@ export default function IssueDetail({ issue, users, currentUser, locations, perm
   const [assignedTo, setAssignedTo] = useState(
     Array.isArray(issue.assignedTo) ? issue.assignedTo : issue.assignedTo ? [issue.assignedTo] : []
   )
+  const [pendingAssignment, setPendingAssignment] = useState(false)
 
   const si = STEPS.indexOf(issue.status)
   const rawLog = issue.statusLog || []
@@ -150,14 +155,22 @@ export default function IssueDetail({ issue, users, currentUser, locations, perm
     ? rawLog
     : [{ status: 'submitted', ts: issue.createdAt, by: issue.submittedByName || issue.submittedBy }, ...rawLog]
 
+  const isAlreadyAssigned = ['assigned', 'solved', 'archived'].includes(issue.status)
+
   useEffect(() => {
+    setTitle(issue.title || '')
     setRealIssue(issue.realIssue || '')
     setSolution(issue.solution || '')
     setUrgency(issue.urgency || 'medium')
     setInvestigating(issue.investigating || '')
     setManager(issue.manager || '')
     setAssignedTo(Array.isArray(issue.assignedTo) ? issue.assignedTo : issue.assignedTo ? [issue.assignedTo] : [])
+    setPendingAssignment(false)
   }, [issue.id, issue.status, issue.statusLog])
+
+  useEffect(() => {
+    if (editingTitle && titleInputRef.current) titleInputRef.current.focus()
+  }, [editingTitle])
 
   const managerUsers = users.filter(u => u.isAdmin || (u.locationRoles || []).some(r => r.role === 'manager'))
   const isSolvedOrArchived = issue.status === 'solved' || issue.status === 'archived'
@@ -171,6 +184,15 @@ export default function IssueDetail({ issue, users, currentUser, locations, perm
     if (!res.ok) return updated
     onUpdate(updated)
     return updated
+  }
+
+  async function saveTitle() {
+    const trimmed = title.trim()
+    if (!trimmed) { setTitle(issue.title); setEditingTitle(false); return }
+    if (trimmed === issue.title) { setEditingTitle(false); return }
+    await patch({ title: trimmed })
+    setEditingTitle(false)
+    onToast('Title updated')
   }
 
   function getLogEntry(s) { return statusLog.find(l => l.status === s) }
@@ -264,8 +286,15 @@ export default function IssueDetail({ issue, users, currentUser, locations, perm
     onToast('Saved')
   }
 
-  async function saveManager(val) { setManager(val) }
-  async function saveAssignedTo(val) { setAssignedTo(val) }
+  function saveManager(val) {
+    setManager(val)
+    if (isAlreadyAssigned) setPendingAssignment(true)
+  }
+
+  function saveAssignedTo(val) {
+    setAssignedTo(val)
+    if (isAlreadyAssigned) setPendingAssignment(true)
+  }
 
   async function addNote() {
     if (!newNote.trim()) return
@@ -274,13 +303,25 @@ export default function IssueDetail({ issue, users, currentUser, locations, perm
     setNewNote(''); onToast('Note added')
   }
 
+  function buildRecipients() {
+    const managerUser = users.find(u => u.username === manager)
+    const staffUsers = assignedTo.map(u => users.find(x => x.username === u)).filter(Boolean)
+    const seen = new Set()
+    const recipients = []
+    for (const u of [managerUser, ...staffUsers]) {
+      if (!u || seen.has(u.id)) continue
+      seen.add(u.id)
+      recipients.push({ name: u.name, email: u.email || '', phone: u.phone || '' })
+    }
+    return recipients
+  }
+
   async function assignAndNotify() {
     if (!manager) { setAssignError('Please select a manager responsible.'); return }
     if (assignedTo.length === 0) { setAssignError('Please assign at least one staff member.'); return }
     setAssignError(''); setAssigning(true)
     try {
       const managerUser = users.find(u => u.username === manager)
-      const assignedEmails = [managerUser?.email, ...assignedTo.map(u => users.find(x => x.username === u)?.email)].filter(Boolean)
       const si_current = STEPS.indexOf(issue.status)
       const si_assigned = STEPS.indexOf('assigned')
       const newLog = [...statusLog]
@@ -290,22 +331,31 @@ export default function IssueDetail({ issue, users, currentUser, locations, perm
           newLog.push({ status: step, ts: new Date().toISOString(), by: currentUser.name })
       }
       await patch({
-        status: 'assigned', statusLog: newLog, manager, managerName: managerUser?.name || '',
+        status: 'assigned', statusLog: newLog,
+        manager, managerName: managerUser?.name || '',
         assignedTo, assignedBy: currentUser.name, assignedAt: new Date().toISOString(),
-        assignedEmail: assignedEmails.join(','),
-        solution, solutionBy: solution !== issue.solution ? currentUser.name : issue.solutionBy,
+        assignedEmail: buildRecipients().map(r => r.email).filter(Boolean).join(','),
+        solution,
+        solutionBy: solution !== issue.solution ? currentUser.name : issue.solutionBy,
         solutionAt: solution !== issue.solution ? new Date().toISOString() : issue.solutionAt,
       })
       try {
         await fetch('/api/issues/notify', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            issueId: issue.id, issueTitle: issue.title, issueDescription: issue.description,
-            locationName: issue.locationName, urgency: issue.urgency, assignedBy: currentUser.name,
-            emails: assignedEmails,
-            assignedNames: [managerUser?.name, ...assignedTo.map(u => users.find(x => x.username === u)?.name)].filter(Boolean),
+            issueId: issue.id,
+            issueTitle: title,
+            issueDescription: issue.description,
+            realIssue: issue.realIssue || realIssue,
+            solution: issue.solution || solution,
+            notes: issue.notes || [],
+            locationName: issue.locationName,
+            urgency: issue.urgency,
+            assignedBy: currentUser.name,
+            recipients: buildRecipients(),
           }),
         })
+        setPendingAssignment(false)
         onToast('Assigned & notifications sent')
       } catch { onToast('Assigned — notifications failed') }
     } catch (e) { console.error('assignAndNotify error:', e); onToast('Assignment failed — check console') }
@@ -345,12 +395,39 @@ export default function IssueDetail({ issue, users, currentUser, locations, perm
 
         {/* ── Header ── */}
         <div className={styles.topRow}>
-          <h2 className={styles.title}>{issue.title}</h2>
+          {editingTitle ? (
+            <input
+              ref={titleInputRef}
+              value={title}
+              onChange={e => setTitle(e.target.value)}
+              onBlur={saveTitle}
+              onKeyDown={e => {
+                if (e.key === 'Enter') saveTitle()
+                if (e.key === 'Escape') { setTitle(issue.title); setEditingTitle(false) }
+              }}
+              style={{
+                flex: 1, fontSize: 'inherit', fontWeight: 700, fontFamily: 'inherit',
+                border: '0.5px solid var(--bl-orange)', borderRadius: 'var(--radius)',
+                padding: '2px 6px', background: 'var(--surface)', color: 'var(--text)',
+                outline: 'none', marginRight: 8,
+              }}
+            />
+          ) : (
+            <h2
+              className={styles.title}
+              onClick={() => setEditingTitle(true)}
+              title="Click to edit title"
+              style={{ cursor: 'text' }}
+            >
+              {title}
+              <span style={{ fontSize: 11, fontWeight: 400, color: 'var(--text-tertiary)', marginLeft: 8, verticalAlign: 'middle' }}>✎</span>
+            </h2>
+          )}
           <span className={`status-badge s-${issue.status}`}>{STEP_LABELS[si] || issue.status}</span>
         </div>
         {issue.description && <p className={styles.desc}>{issue.description}</p>}
 
-        {/* Row 1: "By..." + location pill (desktop inline, mobile stacked) */}
+        {/* Row 1: "By..." + location pill */}
         <div className={styles.chipsRow}>
           <span className={styles.chip}>
             By {issue.submittedByName || issue.submittedBy}{areaEquipment ? ` · ${areaEquipment}` : ''} · {fmtDate(issue.createdAt)} at {fmtTime(issue.createdAt)}
@@ -369,7 +446,7 @@ export default function IssueDetail({ issue, users, currentUser, locations, perm
           )}
         </div>
 
-        {/* Row 2: "Reported by..." + urgency (desktop inline, mobile stacked) */}
+        {/* Row 2: "Reported by..." + urgency */}
         <div className={styles.chipsRow} style={{ marginBottom: '1rem' }}>
           {issue.reportedVia ? (
             <span className={styles.chip}>
@@ -557,17 +634,36 @@ export default function IssueDetail({ issue, users, currentUser, locations, perm
 
           <div style={{ borderTop: '0.5px solid var(--border)', margin: '1rem 0' }} />
 
+          {/* ── Assign section ── */}
           <div ref={assignSectionRef} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 6 }}>
             <div className="section-label" style={{ marginTop: 0, marginBottom: 0 }}>Assign</div>
             <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
               {!isSolvedOrArchived && (
-                <button className="btn-primary" onClick={assignAndNotify} disabled={assigning}>
+                <button
+                  className="btn-primary"
+                  onClick={assignAndNotify}
+                  disabled={assigning}
+                  style={pendingAssignment ? { outline: '2px solid #E85D26', outlineOffset: 2 } : {}}
+                >
                   {assigning ? 'Assigning...' : 'Assign & notify →'}
                 </button>
               )}
               {issue.status === 'solved' && <button onClick={archiveIssue}>Archive →</button>}
             </div>
           </div>
+
+          {pendingAssignment && (
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 8,
+              background: '#FFF8F5', border: '0.5px solid #E85D26',
+              borderRadius: 6, padding: '8px 12px', marginBottom: 10,
+              fontSize: 13, color: '#7A2D00',
+            }}>
+              <span style={{ fontSize: 15 }}>⚠</span>
+              <span>Assignment changed — hit <strong>Assign &amp; notify</strong> to save and notify the team.</span>
+            </div>
+          )}
+
           <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
             <div style={{ flex: 1, minWidth: 160 }}>
               <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginBottom: 4 }}>Manager responsible</div>
@@ -611,8 +707,16 @@ export default function IssueDetail({ issue, users, currentUser, locations, perm
               <button onClick={() => advanceStatus('archived')}>Archive →</button>
             )}
             {!confirmSolve && (
-              <button className={`btn-primary ${styles.saveBtn}`} onClick={saveAll} disabled={saving}>
-                {saving ? 'Saving...' : 'Save changes'}
+              <button
+                className={`btn-primary ${styles.saveBtn}`}
+                onClick={pendingAssignment ? () => {
+                  assignSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+                } : saveAll}
+                disabled={saving}
+                style={pendingAssignment ? { background: '#888', borderColor: '#666', cursor: 'default' } : {}}
+                title={pendingAssignment ? 'Assignment changed — use Assign & notify instead' : ''}
+              >
+                {saving ? 'Saving...' : pendingAssignment ? 'Use Assign & notify ↑' : 'Save changes'}
               </button>
             )}
           </div>
