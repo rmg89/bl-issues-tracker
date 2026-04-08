@@ -7,6 +7,7 @@ export default function App({ Component, pageProps }) {
       <Head>
         <title>Issues Tracker — Brace Life Studios</title>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="true" />
         <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
