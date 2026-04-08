@@ -123,6 +123,12 @@ function fmtTime(str) {
   return new Date(str).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
 }
 
+function normalizeAssignedTo(val) {
+  if (Array.isArray(val)) return val
+  if (val) return [val]
+  return []
+}
+
 export default function IssueDetail({ issue, users, currentUser, locations, permissions, onBack, onUpdate, onToast }) {
   const [title, setTitle] = useState(issue.title || '')
   const [editingTitle, setEditingTitle] = useState(false)
@@ -144,9 +150,7 @@ export default function IssueDetail({ issue, users, currentUser, locations, perm
   const [highlightRealIssue, setHighlightRealIssue] = useState(false)
   const [investigating, setInvestigating] = useState(issue.investigating || '')
   const [manager, setManager] = useState(issue.manager || '')
-  const [assignedTo, setAssignedTo] = useState(
-    Array.isArray(issue.assignedTo) ? issue.assignedTo : issue.assignedTo ? [issue.assignedTo] : []
-  )
+  const [assignedTo, setAssignedTo] = useState(normalizeAssignedTo(issue.assignedTo))
 
   const si = STEPS.indexOf(issue.status)
   const rawLog = issue.statusLog || []
@@ -154,8 +158,13 @@ export default function IssueDetail({ issue, users, currentUser, locations, perm
     ? rawLog
     : [{ status: 'submitted', ts: issue.createdAt, by: issue.submittedByName || issue.submittedBy }, ...rawLog]
 
-  // Derived assign state
-  const assignStarted = !!manager || assignedTo.length > 0
+  // Derived assign state — only "started" if changed from what's saved
+  const savedManager = issue.manager || ''
+  const savedAssignedTo = normalizeAssignedTo(issue.assignedTo)
+  const assignChanged = manager !== savedManager ||
+    JSON.stringify([...assignedTo].sort()) !== JSON.stringify([...savedAssignedTo].sort())
+  // On a fresh unassigned issue with no saved values, typing into assign fields counts as started
+  const assignStarted = assignChanged || ((!savedManager && !savedAssignedTo.length) && (!!manager || assignedTo.length > 0))
   const canAssign = !!manager && assignedTo.length > 0
   const assignDisabledReason = !manager
     ? 'Select a manager first'
@@ -170,7 +179,7 @@ export default function IssueDetail({ issue, users, currentUser, locations, perm
     setUrgency(issue.urgency || 'medium')
     setInvestigating(issue.investigating || '')
     setManager(issue.manager || '')
-    setAssignedTo(Array.isArray(issue.assignedTo) ? issue.assignedTo : issue.assignedTo ? [issue.assignedTo] : [])
+    setAssignedTo(normalizeAssignedTo(issue.assignedTo))
   }, [issue.id, issue.status, issue.statusLog])
 
   useEffect(() => {

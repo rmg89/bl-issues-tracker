@@ -2,6 +2,8 @@
 // Triggered by "Assign & notify".
 // Sends email + SMS immediately, Claude summary has a hard 2s timeout so it never blocks delivery.
 
+export const config = { maxDuration: 60 }
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
