@@ -147,7 +147,6 @@ export default function IssueDetail({ issue, users, currentUser, locations, perm
   const [assignedTo, setAssignedTo] = useState(
     Array.isArray(issue.assignedTo) ? issue.assignedTo : issue.assignedTo ? [issue.assignedTo] : []
   )
-  const [pendingAssignment, setPendingAssignment] = useState(false)
 
   const si = STEPS.indexOf(issue.status)
   const rawLog = issue.statusLog || []
@@ -155,7 +154,14 @@ export default function IssueDetail({ issue, users, currentUser, locations, perm
     ? rawLog
     : [{ status: 'submitted', ts: issue.createdAt, by: issue.submittedByName || issue.submittedBy }, ...rawLog]
 
-  const isAlreadyAssigned = ['assigned', 'solved', 'archived'].includes(issue.status)
+  // Derived assign state
+  const assignStarted = !!manager || assignedTo.length > 0
+  const canAssign = !!manager && assignedTo.length > 0
+  const assignDisabledReason = !manager
+    ? 'Select a manager first'
+    : assignedTo.length === 0
+    ? 'Assign at least one staff member'
+    : ''
 
   useEffect(() => {
     setTitle(issue.title || '')
@@ -165,7 +171,6 @@ export default function IssueDetail({ issue, users, currentUser, locations, perm
     setInvestigating(issue.investigating || '')
     setManager(issue.manager || '')
     setAssignedTo(Array.isArray(issue.assignedTo) ? issue.assignedTo : issue.assignedTo ? [issue.assignedTo] : [])
-    setPendingAssignment(false)
   }, [issue.id, issue.status, issue.statusLog])
 
   useEffect(() => {
@@ -286,15 +291,8 @@ export default function IssueDetail({ issue, users, currentUser, locations, perm
     onToast('Saved')
   }
 
-  function saveManager(val) {
-    setManager(val)
-    if (isAlreadyAssigned) setPendingAssignment(true)
-  }
-
-  function saveAssignedTo(val) {
-    setAssignedTo(val)
-    if (isAlreadyAssigned) setPendingAssignment(true)
-  }
+  function saveManager(val) { setManager(val) }
+  function saveAssignedTo(val) { setAssignedTo(val) }
 
   async function addNote() {
     if (!newNote.trim()) return
@@ -355,7 +353,6 @@ export default function IssueDetail({ issue, users, currentUser, locations, perm
             recipients: buildRecipients(),
           }),
         })
-        setPendingAssignment(false)
         onToast('Assigned & notifications sent')
       } catch { onToast('Assigned — notifications failed') }
     } catch (e) { console.error('assignAndNotify error:', e); onToast('Assignment failed — check console') }
@@ -642,8 +639,8 @@ export default function IssueDetail({ issue, users, currentUser, locations, perm
                 <button
                   className="btn-primary"
                   onClick={assignAndNotify}
-                  disabled={assigning}
-                  style={pendingAssignment ? { outline: '2px solid #E85D26', outlineOffset: 2 } : {}}
+                  disabled={assigning || (assignStarted && !canAssign)}
+                  title={assignStarted && !canAssign ? assignDisabledReason : ''}
                 >
                   {assigning ? 'Assigning...' : 'Assign & notify →'}
                 </button>
@@ -652,17 +649,7 @@ export default function IssueDetail({ issue, users, currentUser, locations, perm
             </div>
           </div>
 
-          {pendingAssignment && (
-            <div style={{
-              display: 'flex', alignItems: 'center', gap: 8,
-              background: '#FFF8F5', border: '0.5px solid #E85D26',
-              borderRadius: 6, padding: '8px 12px', marginBottom: 10,
-              fontSize: 13, color: '#7A2D00',
-            }}>
-              <span style={{ fontSize: 15 }}>⚠</span>
-              <span>Assignment changed — hit <strong>Assign &amp; notify</strong> to save and notify the team.</span>
-            </div>
-          )}
+          {assignError && <div style={{ color: '#C62828', fontSize: 13, marginBottom: 8 }}>{assignError}</div>}
 
           <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
             <div style={{ flex: 1, minWidth: 160 }}>
@@ -677,7 +664,6 @@ export default function IssueDetail({ issue, users, currentUser, locations, perm
               <MultiSelectUsers value={assignedTo} onChange={saveAssignedTo} users={users} />
             </div>
           </div>
-          {assignError && <div style={{ color: '#C62828', fontSize: 13, marginTop: 8 }}>{assignError}</div>}
           {issue.assignedAt && (
             <div className={styles.fieldMeta} style={{ marginTop: 6 }}>Last assigned by {issue.assignedBy} · {fmtDateTime(issue.assignedAt)}</div>
           )}
@@ -707,17 +693,24 @@ export default function IssueDetail({ issue, users, currentUser, locations, perm
               <button onClick={() => advanceStatus('archived')}>Archive →</button>
             )}
             {!confirmSolve && (
-              <button
-                className={`btn-primary ${styles.saveBtn}`}
-                onClick={pendingAssignment ? () => {
-                  assignSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-                } : saveAll}
-                disabled={saving}
-                style={pendingAssignment ? { background: '#888', borderColor: '#666', cursor: 'default' } : {}}
-                title={pendingAssignment ? 'Assignment changed — use Assign & notify instead' : ''}
-              >
-                {saving ? 'Saving...' : pendingAssignment ? 'Use Assign & notify ↑' : 'Save changes'}
-              </button>
+              assignStarted ? (
+                <button
+                  className={`btn-primary ${styles.saveBtn}`}
+                  onClick={assignAndNotify}
+                  disabled={assigning || !canAssign}
+                  title={!canAssign ? assignDisabledReason : ''}
+                >
+                  {assigning ? 'Assigning...' : 'Assign & notify →'}
+                </button>
+              ) : (
+                <button
+                  className={`btn-primary ${styles.saveBtn}`}
+                  onClick={saveAll}
+                  disabled={saving}
+                >
+                  {saving ? 'Saving...' : 'Save changes'}
+                </button>
+              )
             )}
           </div>
         </div>
