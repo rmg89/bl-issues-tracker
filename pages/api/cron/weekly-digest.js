@@ -1,6 +1,6 @@
 // pages/api/cron/weekly-digest.js
-// Weekly digest: reads last 4 snapshots for trend context, sends formatted emails,
-// then writes this week's snapshot to Airtable for future comparisons.
+// Weekly digest: reads last 4 snapshots (quant + qual) for trend context,
+// sends formatted 3-section emails, then writes this week's full snapshot.
 //
 // Trigger manually: POST with header Authorization: Bearer <CRON_SECRET>
 // Automate free: cron-job.org → hit this URL every Monday 8am
@@ -23,7 +23,7 @@ export default async function handler(req, res) {
   if (!brevoKey || !fromEmail) return res.status(500).json({ error: 'Email not configured' })
 
   try {
-    // ── Fetch all data in parallel ────────────────────────────────────────
+    // ── Fetch all data ────────────────────────────────────────────────────
     const [userRecords, issueRecords, locationRecords, roleRecords, snapshotRecords] = await Promise.all([
       UsersTable.select().all(),
       IssuesTable.select({ filterByFormula: `{Status} != 'archived'` }).all(),
@@ -31,7 +31,7 @@ export default async function handler(req, res) {
       UserLocationRolesTable.select().all(),
       WeeklySnapshotsTable.select({
         sort: [{ field: 'WeekOf', direction: 'desc' }],
-        maxRecords: 40, // enough to get 4 weeks per location
+        maxRecords: 40,
       }).all(),
     ])
 
@@ -50,7 +50,7 @@ export default async function handler(req, res) {
       return log && new Date(log.ts) > weekAgo
     })
 
-    // ── Build current stats per location ─────────────────────────────────
+    // ── Current stats ─────────────────────────────────────────────────────
     function currentStats(locationId) {
       const loc = issues.filter(i => !locationId || i.locationId === locationId)
       return {
@@ -65,35 +65,14 @@ export default async function handler(req, res) {
       }
     }
 
-    // ── Get last 4 snapshots for a location ───────────────────────────────
+    // ── Past snapshots for a location (last 4) ────────────────────────────
     function getPastSnapshots(locationId) {
       return allSnapshots
         .filter(s => s.locationId === (locationId || 'all'))
         .slice(0, 4)
     }
 
-    // ── Save this week's snapshot ─────────────────────────────────────────
-    async function saveSnapshot(locationId, locationName, stats) {
-      try {
-        await WeeklySnapshotsTable.create({
-          WeekOf: now.toISOString().split('T')[0],
-          LocationId: locationId || 'all',
-          LocationName: locationName,
-          TotalOpen: stats.total,
-          Submitted: stats.submitted,
-          Identified: stats.identified,
-          Assigned: stats.assigned,
-          Solved: stats.solved,
-          NewThisWeek: stats.newThisWeek,
-          ResolvedThisWeek: stats.resolvedThisWeek,
-          HighUrgency: stats.highUrgency,
-        })
-      } catch (e) {
-        console.error(`Failed to save snapshot for ${locationName}:`, e)
-      }
-    }
-
-    // ── Claude helper ────────────────────────────────────────────────────
+    // ── Claude helper ─────────────────────────────────────────────────────
     async function callClaude(system, userPrompt, maxTokens = 200) {
       try {
         const r = await fetch('https://api.anthropic.com/v1/messages', {
@@ -118,22 +97,24 @@ export default async function handler(req, res) {
       }
     }
 
-    // ── Section 1: New issues this week ──────────────────────────────────
+    // ── Section 1: New issues ─────────────────────────────────────────────
     async function buildNewSection(locationId) {
       const newIssues = locationId
         ? newThisWeek.filter(i => i.locationId === locationId)
         : newThisWeek
 
       if (newIssues.length === 0) {
-        return `
-          <div style="margin-bottom: 28px;">
-            <div style="font-size: 14px; font-weight: 700; color: #333; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.05em;">🆕 New This Week</div>
-            <p style="margin: 0; color: #888; font-size: 13px; font-style: italic;">Nothing new this week — all quiet. 🟢</p>
-          </div>
-        `
+        return {
+          html: `
+            <div style="margin-bottom: 28px;">
+              <div style="font-size: 14px; font-weight: 700; color: #333; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.05em;">🆕 New This Week</div>
+              <p style="margin: 0; color: #888; font-size: 13px; font-style: italic;">Nothing new this week — all quiet. 🟢</p>
+            </div>
+          `,
+          text: 'Nothing new this week.',
+        }
       }
 
-      // One AI sentence per new issue
       const issueRows = await Promise.all(newIssues.map(async issue => {
         const daysSince = Math.floor((now - new Date(issue.createdAt)) / (1000 * 60 * 60 * 24))
         const statusLabel = {
@@ -145,10 +126,10 @@ export default async function handler(req, res) {
         const urgencyDot = { high: '🔴', medium: '🟡', low: '🟢' }[issue.urgency] || ''
 
         const description = await callClaude(
-          `Write one sentence describing a gym facility issue for a manager's weekly digest. 
-Focus on what the problem actually is, not just restating the title. 
+          `Write one sentence describing a gym facility issue for a manager's weekly digest.
+Focus on what the problem actually is, not just restating the title.
 Be plain and specific. No preamble.`,
-          `Issue title: ${issue.title}\nDescription: ${issue.description || ''}\nRoot cause: ${issue.realIssue || ''}`,
+          `Title: ${issue.title}\nDescription: ${issue.description || ''}\nRoot cause: ${issue.realIssue || ''}`,
           80
         )
 
@@ -161,12 +142,15 @@ Be plain and specific. No preamble.`,
         `
       }))
 
-      return `
-        <div style="margin-bottom: 28px;">
-          <div style="font-size: 14px; font-weight: 700; color: #333; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.05em;">🆕 New This Week (${newIssues.length})</div>
-          ${issueRows.join('')}
-        </div>
-      `
+      return {
+        html: `
+          <div style="margin-bottom: 28px;">
+            <div style="font-size: 14px; font-weight: 700; color: #333; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.05em;">🆕 New This Week (${newIssues.length})</div>
+            ${issueRows.join('')}
+          </div>
+        `,
+        text: `${newIssues.length} new issue(s): ${newIssues.map(i => i.title).join(', ')}`,
+      }
     }
 
     // ── Section 2: Needs attention ────────────────────────────────────────
@@ -177,9 +161,10 @@ Be plain and specific. No preamble.`,
         return true
       })
 
-      if (relevant.length === 0) return ''
+      if (relevant.length === 0) {
+        return { html: '', text: 'No open issues to flag.' }
+      }
 
-      // Build a concise data dump for Claude to analyze
       const issueData = relevant.map(i => {
         const daysSince = Math.floor((now - new Date(i.createdAt)) / (1000 * 60 * 60 * 24))
         const lastMove = (i.statusLog || []).slice(-1)[0]
@@ -199,31 +184,64 @@ Be direct. No preamble.`,
         300
       )
 
-      if (!analysis) return ''
+      if (!analysis) return { html: '', text: '' }
 
-      return `
-        <div style="margin-bottom: 28px;">
-          <div style="font-size: 14px; font-weight: 700; color: #333; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.05em;">⚠️ Needs Attention</div>
-          <div style="font-size: 13px; color: #444; line-height: 1.8; white-space: pre-line;">${analysis}</div>
-        </div>
-      `
+      return {
+        html: `
+          <div style="margin-bottom: 28px;">
+            <div style="font-size: 14px; font-weight: 700; color: #333; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.05em;">⚠️ Needs Attention</div>
+            <div style="font-size: 13px; color: #444; line-height: 1.8; white-space: pre-line;">${analysis}</div>
+          </div>
+        `,
+        text: analysis,
+      }
     }
 
     // ── Section 3: Pulse check ────────────────────────────────────────────
     async function buildPulseSection(locationId, locationName, stats, pastSnapshots) {
-      const snapshotSummary = pastSnapshots.length > 0
-        ? pastSnapshots.map((s, i) => `Week ${i + 1} ago: ${s.totalOpen} open, ${s.newThisWeek} new, ${s.resolvedThisWeek} resolved, ${s.highUrgency} high urgency`).join('\n')
-        : 'No historical data yet — this is the first snapshot.'
+      // Build quantitative history
+      const quantHistory = pastSnapshots.length > 0
+        ? pastSnapshots.map((s, i) =>
+            `Week ${i + 1} ago: ${s.totalOpen} open, ${s.newThisWeek} new, ${s.resolvedThisWeek} resolved, ${s.highUrgency} high urgency`
+          ).join('\n')
+        : 'No historical data yet.'
+
+      // Build qualitative history — this is the compounding memory
+      const qualHistory = pastSnapshots
+        .filter(s => s.pulseSummary || s.attentionFlags || s.trendSignal)
+        .map((s, i) => {
+          const parts = []
+          if (s.trendSignal) parts.push(`Signal: ${s.trendSignal}`)
+          if (s.pulseSummary) parts.push(`Pulse: ${s.pulseSummary}`)
+          if (s.attentionFlags) parts.push(`Flags: ${s.attentionFlags}`)
+          return `Week ${i + 1} ago —\n${parts.join('\n')}`
+        }).join('\n\n')
 
       const currentSummary = `This week: ${stats.total} open, ${stats.newThisWeek} new, ${stats.resolvedThisWeek} resolved, ${stats.highUrgency} high urgency`
 
+      const prompt = [
+        `Location: ${locationName}`,
+        `\nCurrent:\n${currentSummary}`,
+        `\nPast 4 weeks (quantitative):\n${quantHistory}`,
+        qualHistory ? `\nPast observations from previous digests:\n${qualHistory}` : '',
+      ].filter(Boolean).join('\n')
+
+      // Get pulse summary
       const pulse = await callClaude(
         `You are writing a weekly health summary for gym facility managers at Brace Life Studios.
-Compare this week's numbers to the past weeks. Is the team keeping up, falling behind, or making progress?
-Are items piling up or getting resolved? Flag any concerning trends plainly.
+Compare this week's numbers to the past weeks and your previous observations.
+Is the team keeping up, falling behind, or making progress? Are patterns repeating?
+Flag any concerning trends or improvements plainly.
 Write 3-4 sentences max. Be direct — this is a quick read, not a report. No preamble.`,
-        `Location: ${locationName}\n\n${currentSummary}\n\nPast 4 weeks:\n${snapshotSummary}`,
-        200
+        prompt,
+        220
+      )
+
+      // Get trend signal — single word for trajectory tracking
+      const trendSignal = await callClaude(
+        `Based on the issue workflow data, respond with exactly one word describing the current trend: improving, stable, slipping, or critical. Nothing else.`,
+        prompt,
+        10
       )
 
       const statRows = [
@@ -233,72 +251,120 @@ Write 3-4 sentences max. Be direct — this is a quick read, not a report. No pr
         ['Solved', stats.solved],
       ].filter(([, v]) => v > 0)
 
-      return `
-        <div style="margin-bottom: 28px;">
-          <div style="font-size: 14px; font-weight: 700; color: #333; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.05em;">📊 Pulse Check</div>
-          ${pulse ? `<p style="margin: 0 0 14px; font-size: 13px; color: #444; line-height: 1.7;">${pulse}</p>` : ''}
-          <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
-            <tr style="border-bottom: 1px solid #eee;">
-              <td style="padding: 5px 0; color: #888; width: 140px;">Total open</td>
-              <td style="font-weight: 600;">${stats.total}</td>
-            </tr>
-            ${statRows.map(([label, count]) => `
-              <tr style="border-bottom: 1px solid #f5f5f5;">
-                <td style="padding: 5px 0; color: #888; padding-left: 12px;">↳ ${label}</td>
-                <td style="color: #555;">${count}</td>
+      const signalColor = {
+        improving: '#2E7D32',
+        stable: '#555',
+        slipping: '#E85D26',
+        critical: '#C62828',
+      }[trendSignal?.toLowerCase()] || '#555'
+
+      return {
+        html: `
+          <div style="margin-bottom: 28px;">
+            <div style="font-size: 14px; font-weight: 700; color: #333; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.05em;">
+              📊 Pulse Check
+              ${trendSignal ? `<span style="margin-left: 10px; font-size: 11px; font-weight: 600; color: ${signalColor}; text-transform: capitalize; letter-spacing: 0.03em;">● ${trendSignal}</span>` : ''}
+            </div>
+            ${pulse ? `<p style="margin: 0 0 14px; font-size: 13px; color: #444; line-height: 1.7;">${pulse}</p>` : ''}
+            <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+              <tr style="border-bottom: 1px solid #eee;">
+                <td style="padding: 5px 0; color: #888; width: 140px;">Total open</td>
+                <td style="font-weight: 600;">${stats.total}</td>
               </tr>
-            `).join('')}
-            <tr style="border-bottom: 1px solid #eee;">
-              <td style="padding: 5px 0; color: #888;">New this week</td>
-              <td style="font-weight: ${stats.newThisWeek > 0 ? '600' : '400'};">${stats.newThisWeek}</td>
-            </tr>
-            <tr>
-              <td style="padding: 5px 0; color: #888;">Resolved this week</td>
-              <td style="font-weight: ${stats.resolvedThisWeek > 0 ? '600' : '400'}; color: ${stats.resolvedThisWeek > 0 ? '#2E7D32' : '#888'};">${stats.resolvedThisWeek}</td>
-            </tr>
-          </table>
-        </div>
-      `
+              ${statRows.map(([label, count]) => `
+                <tr style="border-bottom: 1px solid #f5f5f5;">
+                  <td style="padding: 5px 0; color: #888; padding-left: 12px;">↳ ${label}</td>
+                  <td style="color: #555;">${count}</td>
+                </tr>
+              `).join('')}
+              <tr style="border-bottom: 1px solid #eee;">
+                <td style="padding: 5px 0; color: #888;">New this week</td>
+                <td style="font-weight: ${stats.newThisWeek > 0 ? '600' : '400'};">${stats.newThisWeek}</td>
+              </tr>
+              <tr>
+                <td style="padding: 5px 0; color: #888;">Resolved this week</td>
+                <td style="font-weight: ${stats.resolvedThisWeek > 0 ? '600' : '400'}; color: ${stats.resolvedThisWeek > 0 ? '#2E7D32' : '#888'};">${stats.resolvedThisWeek}</td>
+              </tr>
+            </table>
+          </div>
+        `,
+        pulseSummary: pulse,
+        attentionFlags: '',  // filled in by caller after attention section runs
+        trendSignal: trendSignal?.toLowerCase() || 'stable',
+      }
     }
 
-    // ── Build full email for one location ─────────────────────────────────
-    async function buildLocationEmail(locationId, locationName) {
+    // ── Save snapshot with all fields ─────────────────────────────────────
+    async function saveSnapshot(locationId, locationName, stats, pulseSummary, attentionFlags, trendSignal) {
+      try {
+        await WeeklySnapshotsTable.create({
+          WeekOf: now.toISOString().split('T')[0],
+          LocationId: locationId || 'all',
+          LocationName: locationName,
+          TotalOpen: stats.total,
+          Submitted: stats.submitted,
+          Identified: stats.identified,
+          Assigned: stats.assigned,
+          Solved: stats.solved,
+          NewThisWeek: stats.newThisWeek,
+          ResolvedThisWeek: stats.resolvedThisWeek,
+          HighUrgency: stats.highUrgency,
+          PulseSummary: pulseSummary || '',
+          AttentionFlags: attentionFlags || '',
+          TrendSignal: trendSignal || 'stable',
+        })
+      } catch (e) {
+        console.error(`Failed to save snapshot for ${locationName}:`, e)
+      }
+    }
+
+    // ── Build full section set for one location ───────────────────────────
+    async function buildSections(locationId, locationName) {
       const stats = currentStats(locationId)
       const pastSnapshots = getPastSnapshots(locationId)
 
-      const [newSection, attentionSection, pulseSection] = await Promise.all([
+      const [newResult, attentionResult, pulseResult] = await Promise.all([
         buildNewSection(locationId),
         buildAttentionSection(locationId),
         buildPulseSection(locationId, locationName, stats, pastSnapshots),
       ])
 
-      const weekLabel = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+      // Save snapshot with qualitative data
+      await saveSnapshot(
+        locationId,
+        locationName,
+        stats,
+        pulseResult.pulseSummary,
+        attentionResult.text,
+        pulseResult.trendSignal
+      )
 
-      const html = `
+      return {
+        html: newResult.html + attentionResult.html + pulseResult.html,
+        stats,
+      }
+    }
+
+    // ── Email wrapper ─────────────────────────────────────────────────────
+    const weekLabel = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+
+    function emailShell(inner) {
+      return `
         <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; color: #222;">
-          <div style="background: #E85D26; padding: 16px 24px; border-radius: 8px 8px 0 0; display: flex; align-items: center; justify-content: space-between;">
+          <div style="background: #E85D26; padding: 16px 24px; border-radius: 8px 8px 0 0;">
             <span style="color: white; font-weight: 700; font-size: 16px;">BL Issues Tracker</span>
-            <span style="color: rgba(255,255,255,0.8); font-size: 12px;">Weekly Snapshot · ${weekLabel}</span>
+            <span style="color: rgba(255,255,255,0.8); font-size: 12px; float: right;">Weekly Snapshot · ${weekLabel}</span>
           </div>
           <div style="border: 1px solid #e0e0e0; border-top: none; padding: 24px; border-radius: 0 0 8px 8px;">
-            <p style="margin: 0 0 24px; font-size: 13px; color: #888;">📍 ${locationName} · Week ending ${weekLabel}</p>
-            ${newSection}
-            ${attentionSection}
-            ${pulseSection}
+            ${inner}
             <p style="margin: 24px 0 0; font-size: 12px; color: #aaa; border-top: 1px solid #f0f0f0; padding-top: 12px;">
               Log in to the Issues Tracker to review and take action.
             </p>
           </div>
         </div>
       `
-
-      // Save snapshot after building email
-      await saveSnapshot(locationId, locationName, stats)
-
-      return html
     }
 
-    // ── Send email via Brevo ──────────────────────────────────────────────
     async function sendEmail(to, subject, html) {
       const r = await fetch('https://api.brevo.com/v3/smtp/email', {
         method: 'POST',
@@ -314,111 +380,62 @@ Write 3-4 sentences max. Be direct — this is a quick read, not a report. No pr
       return r.ok
     }
 
-    const weekLabel = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
     const results = []
 
-    // ── Global admins: one email per location + combined ──────────────────
+    // ── Global admins: all locations ──────────────────────────────────────
     const globalAdmins = users.filter(u => u.isGlobalAdmin && u.email)
     if (globalAdmins.length > 0) {
-      // Build each location's section
-      let combinedHtml = `
-        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; color: #222;">
-          <div style="background: #E85D26; padding: 16px 24px; border-radius: 8px 8px 0 0;">
-            <span style="color: white; font-weight: 700; font-size: 16px;">BL Issues Tracker</span>
-            <span style="color: rgba(255,255,255,0.8); font-size: 12px; float: right;">Weekly Snapshot · ${weekLabel}</span>
-          </div>
-          <div style="border: 1px solid #e0e0e0; border-top: none; padding: 24px; border-radius: 0 0 8px 8px;">
-            <p style="margin: 0 0 24px; font-size: 13px; color: #888;">All locations · Week ending ${weekLabel}</p>
-      `
+      let inner = `<p style="margin: 0 0 24px; font-size: 13px; color: #888;">All locations · Week ending ${weekLabel}</p>`
 
       for (const loc of locations) {
-        const stats = currentStats(loc.id)
-        const pastSnapshots = getPastSnapshots(loc.id)
-        const [newSection, attentionSection, pulseSection] = await Promise.all([
-          buildNewSection(loc.id),
-          buildAttentionSection(loc.id),
-          buildPulseSection(loc.id, loc.name, stats, pastSnapshots),
-        ])
-
-        combinedHtml += `
+        const { html } = await buildSections(loc.id, loc.name)
+        inner += `
           <div style="margin-bottom: 36px; padding-bottom: 36px; border-bottom: 2px solid #f0e8e4;">
             <div style="font-size: 16px; font-weight: 700; color: #E85D26; margin-bottom: 20px;">📍 ${loc.name}</div>
-            ${newSection}
-            ${attentionSection}
-            ${pulseSection}
+            ${html}
           </div>
         `
-        await saveSnapshot(loc.id, loc.name, stats)
       }
-
-      combinedHtml += `
-            <p style="margin: 24px 0 0; font-size: 12px; color: #aaa; border-top: 1px solid #f0f0f0; padding-top: 12px;">
-              Log in to the Issues Tracker to review and take action.
-            </p>
-          </div>
-        </div>
-      `
 
       const ok = await sendEmail(
         globalAdmins.map(u => ({ email: u.email, name: u.name })),
         `Weekly Snapshot — All Locations · ${weekLabel}`,
-        combinedHtml
+        emailShell(inner)
       )
       if (ok) results.push(`Global admins (${globalAdmins.length}): sent`)
     }
 
-    // ── Location managers: their location(s) only ─────────────────────────
+    // ── Location managers: their location(s) ─────────────────────────────
     const locationManagers = users.filter(u => !u.isGlobalAdmin && u.email)
     for (const user of locationManagers) {
       const userRoles = roles.filter(r => r.userId === user.id && r.role === 'manager')
       if (userRoles.length === 0) continue
 
       const locationNames = []
-      let innerHtml = `<p style="margin: 0 0 24px; font-size: 13px; color: #888;">Your location(s) · Week ending ${weekLabel}</p>`
+      let inner = `<p style="margin: 0 0 24px; font-size: 13px; color: #888;">Your location(s) · Week ending ${weekLabel}</p>`
 
       for (const role of userRoles) {
         const loc = locations.find(l => l.id === role.locationId)
         if (!loc) continue
         locationNames.push(loc.name)
 
-        const stats = currentStats(loc.id)
-        const pastSnapshots = getPastSnapshots(loc.id)
-        const [newSection, attentionSection, pulseSection] = await Promise.all([
-          buildNewSection(loc.id),
-          buildAttentionSection(loc.id),
-          buildPulseSection(loc.id, loc.name, stats, pastSnapshots),
-        ])
+        const { html } = await buildSections(loc.id, loc.name)
 
         if (userRoles.length > 1) {
-          innerHtml += `<div style="font-size: 15px; font-weight: 700; color: #E85D26; margin-bottom: 16px;">📍 ${loc.name}</div>`
+          inner += `<div style="font-size: 15px; font-weight: 700; color: #E85D26; margin-bottom: 16px;">📍 ${loc.name}</div>`
         }
-        innerHtml += newSection + attentionSection + pulseSection
+        inner += html
         if (userRoles.length > 1) {
-          innerHtml += `<div style="border-bottom: 2px solid #f0e8e4; margin-bottom: 28px;"></div>`
+          inner += `<div style="border-bottom: 2px solid #f0e8e4; margin-bottom: 28px;"></div>`
         }
       }
 
       if (locationNames.length === 0) continue
 
-      const html = `
-        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; color: #222;">
-          <div style="background: #E85D26; padding: 16px 24px; border-radius: 8px 8px 0 0;">
-            <span style="color: white; font-weight: 700; font-size: 16px;">BL Issues Tracker</span>
-            <span style="color: rgba(255,255,255,0.8); font-size: 12px; float: right;">Weekly Snapshot · ${weekLabel}</span>
-          </div>
-          <div style="border: 1px solid #e0e0e0; border-top: none; padding: 24px; border-radius: 0 0 8px 8px;">
-            ${innerHtml}
-            <p style="margin: 24px 0 0; font-size: 12px; color: #aaa; border-top: 1px solid #f0f0f0; padding-top: 12px;">
-              Log in to the Issues Tracker to review and take action.
-            </p>
-          </div>
-        </div>
-      `
-
       const ok = await sendEmail(
         [{ email: user.email, name: user.name }],
         `Weekly Snapshot — ${locationNames.join(', ')} · ${weekLabel}`,
-        html
+        emailShell(inner)
       )
       if (ok) results.push(`${user.name} (${locationNames.join(', ')}): sent`)
     }
