@@ -113,7 +113,10 @@ Use only the information provided. Do not invent details.`,
   const errors = []
 
   // ── 4. Send via Brevo ────────────────────────────────────────────────────
+  console.log('notify debug - recipients:', JSON.stringify(recipients))
+  console.log('notify debug - brevoKey set:', !!brevoKey, 'fromEmail:', fromEmail)
   const emailRecipients = recipients.filter(r => r.email)
+  console.log('notify debug - emailRecipients:', JSON.stringify(emailRecipients))
   if (emailRecipients.length > 0) {
     try {
       const brevoRes = await fetch('https://api.brevo.com/v3/smtp/email', {
