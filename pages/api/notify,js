@@ -1,4 +1,4 @@
-// pages/api/issues/notify.js
+// pages/api/notify.js  ← note: NOT inside /issues/ to avoid conflict with [id].js
 // Triggered by "Assign & notify".
 // 1. Calls Claude to summarize full issue context into a 3-sentence briefing
 // 2. Sends via Brevo email + Twilio SMS to all recipients
@@ -33,7 +33,7 @@ export default async function handler(req, res) {
   }
 
   // ── 1. Build context for Claude ─────────────────────────────────────────
-  const managerRecipient = recipients[0] // first recipient is always the manager
+  const managerRecipient = recipients[0]
   const staffRecipients = recipients.slice(1)
   const assignedStaffNames = staffRecipients.map(r => r.name).filter(Boolean)
 
@@ -72,10 +72,7 @@ Write exactly 3 sentences:
 3. The urgency and any timing context — if a solution or timeline was defined, include it; if not, convey the urgency level plainly.
 Be direct and collegial — like a quick briefing from a colleague, not a formal work order.
 Use only the information provided. Do not invent details.`,
-        messages: [{
-          role: 'user',
-          content: `Write the assignment notification for this issue:\n\n${contextParts}`,
-        }],
+        messages: [{ role: 'user', content: `Write the assignment notification for this issue:\n\n${contextParts}` }],
       }),
     })
     const claudeData = await claudeRes.json()
@@ -91,7 +88,6 @@ Use only the information provided. Do not invent details.`,
   const area = locationParts[1] || ''
   const locationDisplay = [gymLocation, area].filter(Boolean).join(' — ')
   const urgencyLabel = { high: 'High 🔴', medium: 'Medium 🟡', low: 'Low 🟢' }[urgency] || urgency
-  const recipientNames = recipients.map(r => r.name).filter(Boolean).join(', ')
   const subject = `[${gymLocation || 'Issues Tracker'}] You've been assigned: ${issueTitle}`
 
   const html = `

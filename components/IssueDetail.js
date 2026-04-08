@@ -340,7 +340,7 @@ export default function IssueDetail({ issue, users, currentUser, locations, perm
         solutionAt: solution !== issue.solution ? new Date().toISOString() : issue.solutionAt,
       })
       try {
-        await fetch('/api/issues/notify', {
+        await fetch('/api/notify', {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             issueId: issue.id,

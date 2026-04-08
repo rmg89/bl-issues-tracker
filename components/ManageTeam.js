@@ -3,6 +3,50 @@ import styles from './ManageTeam.module.css'
 
 const ROLE_LABELS = { manager: 'Manager', staff: 'Staff' }
 
+// Format a raw phone string into display format: (555) 000-0000
+function formatPhoneDisplay(raw) {
+  if (!raw) return ''
+  const digits = raw.replace(/\D/g, '').replace(/^1/, '') // strip country code
+  if (digits.length === 0) return ''
+  if (digits.length <= 3) return `(${digits}`
+  if (digits.length <= 6) return `(${digits.slice(0, 3)}) ${digits.slice(3)}`
+  return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6, 10)}`
+}
+
+// Convert display input to E.164 for storage: +1XXXXXXXXXX
+function toE164(raw) {
+  const digits = raw.replace(/\D/g, '').replace(/^1/, '')
+  if (digits.length !== 10) return null
+  return `+1${digits}`
+}
+
+function PhoneInput({ value, onChange, onSave, onCancel, placeholder = '(555) 000-0000' }) {
+  function handleChange(e) {
+    // Only allow digits, strip everything else, re-format for display
+    const raw = e.target.value.replace(/\D/g, '').slice(0, 10)
+    onChange(raw)
+  }
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+      <div style={{ display: 'flex', alignItems: 'center', border: '0.5px solid var(--border-strong)', borderRadius: 'var(--radius)', background: 'var(--surface)', overflow: 'hidden' }}>
+        <span style={{ padding: '0 6px 0 8px', fontSize: 13, color: 'var(--text-tertiary)', borderRight: '0.5px solid var(--border)', background: 'var(--surface-raised)', lineHeight: '34px' }}>+1</span>
+        <input
+          type="tel"
+          inputMode="numeric"
+          placeholder={placeholder}
+          value={formatPhoneDisplay(value)}
+          onChange={handleChange}
+          onKeyDown={e => { if (e.key === 'Enter') onSave(); if (e.key === 'Escape') onCancel() }}
+          autoFocus
+          style={{ border: 'none', outline: 'none', padding: '0 8px', fontSize: 13, width: 140, background: 'transparent', height: 34 }}
+        />
+      </div>
+      <button onClick={onSave}>Save</button>
+      <button onClick={onCancel}>Cancel</button>
+    </div>
+  )
+}
+
 export default function ManageTeam({ users, locations, activeLocationId, currentUser, isGlobalAdmin, onUsersChange, onToast }) {
   const [showAdd, setShowAdd] = useState(false)
   const [name, setName] = useState('')
@@ -10,23 +54,20 @@ export default function ManageTeam({ users, locations, activeLocationId, current
   const [pin, setPin] = useState('')
   const [isGAdmin, setIsGAdmin] = useState(false)
   const [email, setEmail] = useState('')
-  const [phone, setPhone] = useState('')
+  const [phone, setPhone] = useState('') // stored as raw 10 digits during input
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
 
-  // For editing individual fields
   const [editingEmail, setEditingEmail] = useState(null)
   const [editEmailValue, setEditEmailValue] = useState('')
   const [editingPhone, setEditingPhone] = useState(null)
-  const [editPhoneValue, setEditPhoneValue] = useState('')
+  const [editPhoneValue, setEditPhoneValue] = useState('') // raw 10 digits during edit
 
-  // For assigning roles at locations
   const [assigningUserId, setAssigningUserId] = useState(null)
   const [assignRole, setAssignRole] = useState('staff')
   const [assignLocationId, setAssignLocationId] = useState(activeLocationId !== 'all' ? activeLocationId : '')
   const [assignSaving, setAssignSaving] = useState(false)
 
-  // Which users to show — if not global admin, only show users at this location
   const displayUsers = isGlobalAdmin
     ? users
     : users.filter(u => {
@@ -64,14 +105,21 @@ export default function ManageTeam({ users, locations, activeLocationId, current
 
   function startEditPhone(user) {
     setEditingPhone(user.id)
-    setEditPhoneValue(user.phone || '')
+    // Strip +1 and non-digits for editing
+    const digits = (user.phone || '').replace(/\D/g, '').replace(/^1/, '')
+    setEditPhoneValue(digits)
   }
 
   async function savePhone(user) {
+    const e164 = toE164(editPhoneValue)
+    if (editPhoneValue && !e164) {
+      onToast('Please enter a valid 10-digit US number')
+      return
+    }
     const res = await fetch(`/api/users/${user.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone: editPhoneValue }),
+      body: JSON.stringify({ phone: e164 || '' }),
     })
     const updated = await res.json()
     onUsersChange(users.map(u => u.id === user.id ? { ...u, ...updated, locationRoles: u.locationRoles } : u))
@@ -93,11 +141,14 @@ export default function ManageTeam({ users, locations, activeLocationId, current
     if (users.find(u => u.username.toLowerCase() === username.toLowerCase())) {
       setError('Username already exists.'); return
     }
+    const e164Phone = phone ? toE164(phone) : ''
+    if (phone && !e164Phone) { setError('Please enter a valid 10-digit US phone number.'); return }
+
     setSaving(true)
     const res = await fetch('/api/users', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, username: username.toLowerCase(), pin, isGlobalAdmin: isGAdmin, email, phone }),
+      body: JSON.stringify({ name, username: username.toLowerCase(), pin, isGlobalAdmin: isGAdmin, email, phone: e164Phone }),
     })
     const created = await res.json()
     if (created.error) { setError(created.error); setSaving(false); return }
@@ -130,7 +181,6 @@ export default function ManageTeam({ users, locations, activeLocationId, current
       }),
     })
     const newRole = await res.json()
-    // Update user's locationRoles in local state
     onUsersChange(users.map(u => {
       if (u.id !== assigningUserId) return u
       const existing = (u.locationRoles || []).filter(r => r.locationId !== assignLocationId)
@@ -197,7 +247,20 @@ export default function ManageTeam({ users, locations, activeLocationId, current
             </div>
             <div className="form-group">
               <label>Phone (for SMS, optional)</label>
-              <input type="tel" placeholder="+1 555 000 0000" value={phone} onChange={e => setPhone(e.target.value)} />
+              <div style={{ display: 'flex', alignItems: 'center', border: '0.5px solid var(--border-strong)', borderRadius: 'var(--radius)', background: 'var(--surface)', overflow: 'hidden' }}>
+                <span style={{ padding: '0 6px 0 8px', fontSize: 13, color: 'var(--text-tertiary)', borderRight: '0.5px solid var(--border)', background: 'var(--surface-raised)', lineHeight: '38px' }}>+1</span>
+                <input
+                  type="tel"
+                  inputMode="numeric"
+                  placeholder="(555) 000-0000"
+                  value={formatPhoneDisplay(phone)}
+                  onChange={e => {
+                    const digits = e.target.value.replace(/\D/g, '').slice(0, 10)
+                    setPhone(digits)
+                  }}
+                  style={{ border: 'none', outline: 'none', padding: '0 8px', fontSize: 13, flex: 1, background: 'transparent', height: 38 }}
+                />
+              </div>
             </div>
           </div>
           {error && <div style={{ color: '#C62828', fontSize: 13, marginBottom: 10 }}>{error}</div>}
@@ -243,19 +306,11 @@ export default function ManageTeam({ users, locations, activeLocationId, current
                 <div className={styles.assignPanel}>
                   <div className="section-label" style={{ marginTop: 8, marginBottom: 6 }}>Assign to location</div>
                   <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                    <select
-                      value={assignLocationId}
-                      onChange={e => setAssignLocationId(e.target.value)}
-                      style={{ flex: 1, minWidth: 140 }}
-                    >
+                    <select value={assignLocationId} onChange={e => setAssignLocationId(e.target.value)} style={{ flex: 1, minWidth: 140 }}>
                       <option value="">Select location...</option>
                       {locations.map(l => <option key={l.id} value={l.id}>{l.name}</option>)}
                     </select>
-                    <select
-                      value={assignRole}
-                      onChange={e => setAssignRole(e.target.value)}
-                      style={{ minWidth: 110 }}
-                    >
+                    <select value={assignRole} onChange={e => setAssignRole(e.target.value)} style={{ minWidth: 110 }}>
                       <option value="staff">Staff</option>
                       <option value="manager">Manager</option>
                     </select>
@@ -296,22 +351,19 @@ export default function ManageTeam({ users, locations, activeLocationId, current
               {/* Phone */}
               {editingPhone === user.id ? (
                 <div className={styles.emailEditRow} style={{ marginTop: 4 }}>
-                  <input
-                    type="tel"
-                    className={styles.emailInput}
-                    placeholder="+1 555 000 0000"
+                  <PhoneInput
                     value={editPhoneValue}
-                    onChange={e => setEditPhoneValue(e.target.value)}
-                    onKeyDown={e => { if (e.key === 'Enter') savePhone(user); if (e.key === 'Escape') setEditingPhone(null) }}
-                    autoFocus
+                    onChange={setEditPhoneValue}
+                    onSave={() => savePhone(user)}
+                    onCancel={() => setEditingPhone(null)}
                   />
-                  <button className={styles.saveEmailBtn} onClick={() => savePhone(user)}>Save</button>
-                  <button className={styles.cancelEmailBtn} onClick={() => setEditingPhone(null)}>Cancel</button>
                 </div>
               ) : (
                 <div className={styles.emailRow} style={{ marginTop: 2 }}>
                   <span className={styles.emailDisplay}>
-                    {user.phone || <span style={{ color: 'var(--text-tertiary)' }}>No phone</span>}
+                    {user.phone
+                      ? formatPhoneDisplay(user.phone)
+                      : <span style={{ color: 'var(--text-tertiary)' }}>No phone</span>}
                   </span>
                   <button className={styles.editEmailBtn} onClick={() => startEditPhone(user)}>
                     {user.phone ? 'Edit' : 'Add phone'}
@@ -333,7 +385,6 @@ export default function ManageTeam({ users, locations, activeLocationId, current
               {isGlobalAdmin && user.id !== currentUser.id && (
                 <button className="btn-danger" onClick={() => removeUser(user)}>Remove</button>
               )}
-              
             </div>
           </div>
         ))}
