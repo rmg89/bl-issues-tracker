@@ -53,7 +53,7 @@ export default async function handler(req, res) {
             <tr><td style="padding: 6px 0; color: #888;">Urgency</td><td style="font-weight: 500;">${urgencyLabel}</td></tr>
             <tr><td style="padding: 6px 0; color: #888;">Status</td><td style="font-weight: 500;">Submitted — awaiting review</td></tr>
           </table>
-          <p style="margin: 0; font-size: 12px; color: #aaa;">Log in to the Issues Tracker to review and take action.</p>
+          <p style="margin: 0; font-size: 12px; color: #aaa;">Log in to <a href="https://issues.bracelifestudios.com" style="color: #E85D26;">issues.bracelifestudios.com</a> to review and take action.</p>
         </div>
       </div>
     `

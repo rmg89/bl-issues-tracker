@@ -1,7 +1,6 @@
-// pages/api/notify.js  ← note: NOT inside /issues/ to avoid conflict with [id].js
+// pages/api/notify.js
 // Triggered by "Assign & notify".
-// 1. Calls Claude to summarize full issue context into a 3-sentence briefing
-// 2. Sends via Brevo email + Twilio SMS to all recipients
+// Sends email + SMS immediately, Claude summary has a hard 2s timeout so it never blocks delivery.
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
@@ -11,11 +10,11 @@ export default async function handler(req, res) {
     issueDescription,
     realIssue,
     solution,
-    notes,           // [{ text, authorName, ts }]
+    notes,
     locationName,
     urgency,
     assignedBy,
-    recipients,      // [{ name, email, phone }]
+    recipients,
   } = req.body
 
   if (!recipients || recipients.length === 0) {
@@ -29,33 +28,34 @@ export default async function handler(req, res) {
   const twilioFrom = process.env.TWILIO_FROM_NUMBER
 
   if (!brevoKey || !fromEmail) {
-    return res.status(500).json({ error: 'Email not configured (missing BREVO_API_KEY or NOTIFY_FROM_EMAIL)' })
+    return res.status(500).json({ error: 'Email not configured' })
   }
 
-  // ── 1. Build context for Claude ─────────────────────────────────────────
   const managerRecipient = recipients[0]
   const staffRecipients = recipients.slice(1)
   const assignedStaffNames = staffRecipients.map(r => r.name).filter(Boolean)
 
-  const notesText = (notes || []).length > 0
-    ? (notes || []).map(n => `- ${n.authorName}: ${n.text}`).join('\n')
-    : null
+  // ── 1. Build fallback summary (used if Claude times out) ─────────────────
+  const fallbackSummary = [issueDescription, realIssue].filter(Boolean).join(' — ') || issueTitle
 
-  const contextParts = [
-    `Title: ${issueTitle}`,
-    issueDescription && `Description: ${issueDescription}`,
-    realIssue && `Root cause identified: ${realIssue}`,
-    solution && `Planned fix / timeline: ${solution}`,
-    notesText && `Discussion:\n${notesText}`,
-    `Urgency: ${urgency}`,
-    `Manager responsible: ${managerRecipient?.name || assignedBy}`,
-    assignedStaffNames.length > 0 && `Assigned staff: ${assignedStaffNames.join(', ')}`,
-  ].filter(Boolean).join('\n\n')
-
-  // ── 2. Call Claude ───────────────────────────────────────────────────────
-  let aiSummary = [issueDescription, realIssue].filter(Boolean).join(' — ') || issueTitle
+  // ── 2. Try Claude with a hard 2s timeout ────────────────────────────────
+  let aiSummary = fallbackSummary
   try {
-    const claudeRes = await fetch('https://api.anthropic.com/v1/messages', {
+    const notesText = (notes || []).length > 0
+      ? notes.map(n => `- ${n.authorName}: ${n.text}`).join('\n')
+      : null
+    const contextParts = [
+      `Title: ${issueTitle}`,
+      issueDescription && `Description: ${issueDescription}`,
+      realIssue && `Root cause: ${realIssue}`,
+      solution && `Planned fix: ${solution}`,
+      notesText && `Discussion:\n${notesText}`,
+      `Urgency: ${urgency}`,
+      `Manager: ${managerRecipient?.name || assignedBy}`,
+      assignedStaffNames.length > 0 && `Staff: ${assignedStaffNames.join(', ')}`,
+    ].filter(Boolean).join('\n\n')
+
+    const claudePromise = fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -63,23 +63,28 @@ export default async function handler(req, res) {
         'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 200,
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 150,
         system: `You write assignment notifications for gym facility staff at Brace Life Studios.
 Write exactly 3 sentences:
 1. What the problem is and what needs to happen to fix it.
-2. Who they are working with on this (list assigned staff) and who they report to (the manager).
-3. The urgency and any timing context — if a solution or timeline was defined, include it; if not, convey the urgency level plainly.
-Be direct and collegial — like a quick briefing from a colleague, not a formal work order.
-Use only the information provided. Do not invent details.`,
-        messages: [{ role: 'user', content: `Write the assignment notification for this issue:\n\n${contextParts}` }],
+2. Who they are working with and who they report to.
+3. The urgency and any timing context.
+Be direct and collegial. Use only the information provided.`,
+        messages: [{ role: 'user', content: `Write the assignment notification:\n\n${contextParts}` }],
       }),
     })
+
+    const timeoutPromise = new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Claude timeout')), 2000)
+    )
+
+    const claudeRes = await Promise.race([claudePromise, timeoutPromise])
     const claudeData = await claudeRes.json()
     const text = claudeData?.content?.find(b => b.type === 'text')?.text
     if (text) aiSummary = text.trim()
   } catch (e) {
-    console.error('Claude summary failed, falling back:', e)
+    console.log('Claude skipped:', e.message)
   }
 
   // ── 3. Build email ───────────────────────────────────────────────────────
@@ -105,7 +110,7 @@ Use only the information provided. Do not invent details.`,
           <tr><td style="padding: 6px 0; color: #888;">Manager</td><td style="font-weight: 500;">${managerRecipient?.name || '—'}</td></tr>
           ${assignedStaffNames.length > 0 ? `<tr><td style="padding: 6px 0; color: #888;">Assigned to</td><td style="font-weight: 500;">${assignedStaffNames.join(', ')}</td></tr>` : ''}
         </table>
-        <p style="margin: 0; font-size: 12px; color: #aaa;">Log in to the Issues Tracker to view full details and update progress.</p>
+        <p style="margin: 0; font-size: 12px; color: #ccc;"><a href="https://issues.bracelifestudios.com" style="color: #ccc;">issues.bracelifestudios.com</a></p>
       </div>
     </div>
   `
@@ -113,10 +118,7 @@ Use only the information provided. Do not invent details.`,
   const errors = []
 
   // ── 4. Send via Brevo ────────────────────────────────────────────────────
-  console.log('notify debug - recipients:', JSON.stringify(recipients))
-  console.log('notify debug - brevoKey set:', !!brevoKey, 'fromEmail:', fromEmail)
   const emailRecipients = recipients.filter(r => r.email)
-  console.log('notify debug - emailRecipients:', JSON.stringify(emailRecipients))
   if (emailRecipients.length > 0) {
     try {
       const brevoRes = await fetch('https://api.brevo.com/v3/smtp/email', {
