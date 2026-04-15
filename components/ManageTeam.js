@@ -62,6 +62,9 @@ export default function ManageTeam({ users, locations, activeLocationId, current
   const [editEmailValue, setEditEmailValue] = useState('')
   const [editingPhone, setEditingPhone] = useState(null)
   const [editPhoneValue, setEditPhoneValue] = useState('') // raw 10 digits during edit
+  const [editingPin, setEditingPin] = useState(null)
+  const [editPinValue, setEditPinValue] = useState('')
+  const [pinError, setPinError] = useState('')
 
   const [assigningUserId, setAssigningUserId] = useState(null)
   const [assignRole, setAssignRole] = useState('staff')
@@ -125,6 +128,29 @@ export default function ManageTeam({ users, locations, activeLocationId, current
     onUsersChange(users.map(u => u.id === user.id ? { ...u, ...updated, locationRoles: u.locationRoles } : u))
     setEditingPhone(null)
     onToast('Phone saved')
+  }
+
+  function startEditPin(user) {
+    setEditingPin(user.id)
+    setEditPinValue('')
+    setPinError('')
+  }
+
+  async function savePin(user) {
+    if (!editPinValue || editPinValue.length < 4) {
+      setPinError('PIN must be 4–6 digits.')
+      return
+    }
+    const res = await fetch(`/api/users/${user.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pin: editPinValue }),
+    })
+    const updated = await res.json()
+    onUsersChange(users.map(u => u.id === user.id ? { ...u, ...updated, locationRoles: u.locationRoles } : u))
+    setEditingPin(null)
+    setPinError('')
+    onToast('PIN updated')
   }
 
   async function removeUser(user) {
@@ -370,6 +396,36 @@ export default function ManageTeam({ users, locations, activeLocationId, current
                   </button>
                 </div>
               )}
+
+              {/* PIN — global admin only */}
+              {isGlobalAdmin && (
+                editingPin === user.id ? (
+                  <div className={styles.emailEditRow} style={{ marginTop: 4 }}>
+                    <input
+                      type="password"
+                      inputMode="numeric"
+                      maxLength={6}
+                      placeholder="4–6 digits"
+                      value={editPinValue}
+                      onChange={e => { setEditPinValue(e.target.value.replace(/\D/g, '')); setPinError('') }}
+                      onKeyDown={e => { if (e.key === 'Enter') savePin(user); if (e.key === 'Escape') { setEditingPin(null); setPinError('') } }}
+                      autoFocus
+                      style={{ width: 100 }}
+                    />
+                    <button onClick={() => savePin(user)}>Save</button>
+                    <button onClick={() => { setEditingPin(null); setPinError('') }}>Cancel</button>
+                    {pinError && <span style={{ fontSize: 12, color: '#C62828', marginLeft: 4 }}>{pinError}</span>}
+                  </div>
+                ) : (
+                  <div className={styles.emailRow} style={{ marginTop: 2 }}>
+                    <span className={styles.emailDisplay} style={{ color: 'var(--text-tertiary)', letterSpacing: 2 }}>••••</span>
+                    <button className={styles.editEmailBtn} onClick={() => startEditPin(user)}>
+                      Change PIN
+                    </button>
+                  </div>
+                )
+              )}
+
             </div>
 
             {/* Actions */}
